@@ -1,5 +1,7 @@
 # ⚽ MatchIQ — FIFA World Cup 2026 Intelligence Platform
 
+**Live demo: [matchiq-pi.vercel.app](https://matchiq-pi.vercel.app)** · **API: [matchiq-api-1sye.onrender.com](https://matchiq-api-1sye.onrender.com/docs)**
+
 A production-ready, full-stack analytics dashboard for the FIFA World Cup 2026: live scores, group standings, player stats, Dixon-Coles match predictions, Monte Carlo tournament simulation, CSV data exports, and an embeddable score widget — all in a dark, mobile-first UI with IST match times.
 
 ![MatchIQ Home](docs/screenshot-home.png)
@@ -73,7 +75,7 @@ Interactive docs: `http://localhost:8000/docs`
 Add live scores or standings to any site with one iframe — no React required:
 
 ```html
-<iframe src="https://YOUR-APP.vercel.app/embed.html?type=ticker&theme=dark"
+<iframe src="https://matchiq-pi.vercel.app/embed.html?type=ticker&theme=dark"
         width="100%" height="120" frameborder="0"></iframe>
 ```
 

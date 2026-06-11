@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MatchIQ Widget</title>
+<style>
+  :root { --bg:#0A0E1A; --card:#131929; --line:#27314A; --text:#e2e8f0; --muted:#94a3b8; --gold:#FFD700; --green:#00FF87; }
+  .light { --bg:#f8fafc; --card:#ffffff; --line:#e2e8f0; --text:#0f172a; --muted:#64748b; --gold:#b45309; --green:#059669; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); padding:8px; }
+  .brand { display:flex; justify-content:space-between; align-items:center; font-size:10px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px; }
+  .brand b { color:var(--gold); }
+  .ticker { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
+  .m { flex:0 0 auto; min-width:190px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:8px 10px; }
+  .row { display:flex; justify-content:space-between; gap:8px; font-size:13px; line-height:1.7; }
+  .row .sc { font-weight:700; font-variant-numeric:tabular-nums; }
+  .st { font-size:10px; color:var(--muted); display:flex; justify-content:space-between; margin-bottom:4px; }
+  .live { color:var(--green); font-weight:700; }
+  .dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--green); margin-right:4px; animation:p 1.4s infinite; }
+  @keyframes p { 50% { opacity:.3; } }
+  table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden; font-size:13px; }
+  th, td { padding:6px 8px; text-align:left; border-bottom:1px solid var(--line); }
+  th { font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:.5px; }
+  td.n, th.n { text-align:center; font-variant-numeric:tabular-nums; }
+  tr.q td:first-child { box-shadow:inset 3px 0 0 var(--green); }
+  .pts { font-weight:700; color:var(--gold); }
+  .msg { padding:14px; color:var(--muted); font-size:13px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="brand"><span id="title">FIFA 2026</span><span>Powered by <b>MatchIQ</b></span></div>
+<div id="root"><div class="msg">Loading…</div></div>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var api = q.get("api") || "http://localhost:8000";
+  var type = q.get("type") || "ticker";
+  var theme = q.get("theme") || "dark";
+  var group = (q.get("group") || "A").toUpperCase();
+  if (theme === "light") document.documentElement.className = "light";
+  var root = document.getElementById("root");
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function fail() {
+    root.innerHTML = '<div class="msg">Could not load MatchIQ data.</div>';
+  }
+
+  function renderTicker(matches) {
+    if (!matches.length) {
+      root.innerHTML = '<div class="msg">No matches right now — check back at kickoff.</div>';
+      return;
+    }
+    root.innerHTML =
+      '<div class="ticker">' +
+      matches
+        .map(function (m) {
+          var status =
+            m.status === "LIVE"
+              ? '<span class="live"><span class="dot"></span>' + m.minute + "'</span>"
+              : m.status === "HT"
+                ? '<span class="live">HT</span>'
+                : m.status === "FT"
+                  ? "FT"
+                  : esc((m.kickoff_ist || "").slice(11));
+          var hs = m.home_score == null ? "–" : m.home_score;
+          var as = m.away_score == null ? "–" : m.away_score;
+          return (
+            '<div class="m"><div class="st"><span>' + esc(m.group ? "Group " + m.group : m.stage) + "</span>" + status + "</div>" +
+            '<div class="row"><span>' + esc((m.home && m.home.flag) || "") + " " + esc((m.home && m.home.name) || "TBD") + '</span><span class="sc">' + hs + "</span></div>" +
+            '<div class="row"><span>' + esc((m.away && m.away.flag) || "") + " " + esc((m.away && m.away.name) || "TBD") + '</span><span class="sc">' + as + "</span></div></div>"
+          );
+        })
+        .join("") +
+      "</div>";
+  }
+
+  function renderStandings(data) {
+    document.getElementById("title").textContent = "FIFA 2026 — Group " + group;
+    root.innerHTML =
+      '<table><tr><th class="n">#</th><th>Team</th><th class="n">P</th><th class="n">GD</th><th class="n">Pts</th></tr>' +
+      data.rows
+        .map(function (r) {
+          return (
+            "<tr" + (r.position <= 2 ? ' class="q"' : "") + '><td class="n">' + r.position + "</td><td>" +
+            esc(r.team.flag) + " " + esc(r.team.name) + '</td><td class="n">' + r.played +
+            '</td><td class="n">' + (r.goal_diff > 0 ? "+" : "") + r.goal_diff +
+            '</td><td class="n pts">' + r.points + "</td></tr>"
+          );
+        })
+        .join("") +
+      "</table>";
+  }
+
+  function load() {
+    if (type === "standings") {
+      fetch(api + "/api/standings/" + group)
+        .then(function (r) { return r.json(); })
+        .then(renderStandings)
+        .catch(fail);
+    } else {
+      fetch(api + "/api/matches/today")
+        .then(function (r) { return r.json(); })
+        .then(function (today) {
+          if (today.length) return renderTicker(today);
+          return fetch(api + "/api/matches/live")
+            .then(function (r) { return r.json(); })
+            .then(renderTicker);
+        })
+        .catch(fail);
+    }
+  }
+
+  load();
+  setInterval(load, 60000);
+})();
+</script>
+</body>
+</html>

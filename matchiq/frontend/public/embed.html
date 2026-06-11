@@ -34,7 +34,7 @@
 <script>
 (function () {
   var q = new URLSearchParams(location.search);
-  var api = q.get("api") || "http://localhost:8000";
+  var api = q.get("api") || "https://matchiq-api-1sye.onrender.com";
   var type = q.get("type") || "ticker";
   var theme = q.get("theme") || "dark";
   var group = (q.get("group") || "A").toUpperCase();

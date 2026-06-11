@@ -6,6 +6,7 @@ import EmbedWidget from "./components/widgets/EmbedWidget";
 import Home from "./pages/Home";
 import Matches from "./pages/Matches";
 import Teams from "./pages/Teams";
+import TeamSquad from "./pages/TeamSquad";
 import Players from "./pages/Players";
 import Predictions from "./pages/Predictions";
 import Standings from "./pages/Standings";
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="/predictions" element={<Predictions />} />
             <Route path="/players" element={<Players />} />
             <Route path="/teams" element={<Teams />} />
+            <Route path="/teams/:teamId" element={<TeamSquad />} />
             <Route path="/bracket" element={<Bracket />} />
             <Route path="/widget" element={<WidgetPage />} />
             <Route path="*" element={<NotFound />} />

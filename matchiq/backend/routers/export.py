@@ -84,7 +84,9 @@ def export_players():
             "name": p["name"],
             "team": p["team_name"],
             "position": p["position"],
+            "role": p.get("role") or "",
             "age": p["age"],
+            "nationality": p.get("nationality") or "",
             "goals": p["goals"],
             "assists": p["assists"],
             "xg": p["xg"],
@@ -96,7 +98,7 @@ def export_players():
     ]
     return _csv_response(
         rows,
-        ["player_id", "name", "team", "position", "age", "goals", "assists",
-         "xg", "pass_accuracy", "minutes", "rating"],
+        ["player_id", "name", "team", "position", "role", "age", "nationality",
+         "goals", "assists", "xg", "pass_accuracy", "minutes", "rating"],
         "matchiq_players.csv",
     )

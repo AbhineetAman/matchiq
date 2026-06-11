@@ -10,6 +10,7 @@ export const fetchMatches = (params = {}) => api.get("/api/matches", { params })
 export const fetchMatch = (id) => api.get(`/api/matches/${id}`).then((r) => r.data);
 export const fetchStandings = () => api.get("/api/standings").then((r) => r.data);
 export const fetchTeams = () => api.get("/api/teams").then((r) => r.data);
+export const fetchTeamSquad = (ref) => api.get(`/api/teams/${ref}`).then((r) => r.data);
 export const fetchPlayers = (params = {}) => api.get("/api/players", { params }).then((r) => r.data);
 export const fetchPrediction = (home, away) =>
   api.get(`/api/predictions/${encodeURIComponent(home)}/${encodeURIComponent(away)}`).then((r) => r.data);

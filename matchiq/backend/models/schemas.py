@@ -57,14 +57,32 @@ class Player(BaseModel):
     team_name: str
     team_flag: str
     position: str  # GK | DF | MF | FW
+    role: Optional[str] = None  # detailed position from the live API
     age: int
+    nationality: Optional[str] = None
+    date_of_birth: Optional[str] = None
     goals: int
     assists: int
-    xg: float
-    pass_accuracy: float
-    minutes: int
-    rating: float
+    # advanced metrics are only present in demo mode — the free live feed
+    # does not provide them, and we never fabricate live stats
+    xg: Optional[float] = None
+    pass_accuracy: Optional[float] = None
+    minutes: Optional[int] = None
+    rating: Optional[float] = None
     form: List[str]
+
+
+class Coach(BaseModel):
+    name: str
+    nationality: Optional[str] = None
+    age: Optional[int] = None
+
+
+class TeamSquad(BaseModel):
+    team: Team
+    coach: Optional[Coach] = None
+    squad_size: int
+    players: List[Player]
 
 
 class ScorelineProb(BaseModel):

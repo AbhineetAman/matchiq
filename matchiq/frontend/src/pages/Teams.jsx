@@ -23,7 +23,7 @@ export default function Teams() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-extrabold text-white">All 48 Teams</h1>
-        <p className="mt-1 text-sm text-slate-400">Ratings power the Dixon-Coles prediction engine.</p>
+        <p className="mt-1 text-sm text-slate-400">Tap a team for its full squad and coach. Ratings power the Dixon-Coles prediction engine.</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -40,7 +40,7 @@ export default function Teams() {
               {byGroup[letter].map((t) => (
                 <Link
                   key={t.id}
-                  to={`/players?team=${t.id}`}
+                  to={`/teams/${t.id}`}
                   className="flex items-center gap-3 px-4 py-2.5 text-sm transition hover:bg-navy-700/40"
                 >
                   <span className="text-xl">{t.flag}</span>

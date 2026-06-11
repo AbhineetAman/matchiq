@@ -28,11 +28,14 @@ function radarData(a, b) {
     ["Passing", (p) => p.pass_accuracy, 100],
     ["Rating", (p) => p.rating, 10],
     ["Minutes", (p) => p.minutes, 320],
+    ["Age", (p) => p.age, 40],
   ];
-  return metrics.map(([label, fn, max]) => ({
+  // live-mode players carry no advanced metrics — only chart what both have
+  const usable = metrics.filter(([, fn]) => fn(a) != null && (!b || fn(b) != null));
+  return usable.map(([label, fn, max]) => ({
     metric: label,
-    [a.name]: Math.round((fn(a) / max) * 100),
-    ...(b ? { [b.name]: Math.round((fn(b) / max) * 100) } : {}),
+    [a.name]: Math.round(((fn(a) ?? 0) / max) * 100),
+    ...(b ? { [b.name]: Math.round(((fn(b) ?? 0) / max) * 100) } : {}),
   }));
 }
 
@@ -51,17 +54,19 @@ function PlayerCard({ player, selected, onToggle, index }) {
         </div>
         <div className="min-w-0">
           <div className="truncate font-semibold text-white">{player.name}</div>
-          <div className="text-xs text-slate-400">
-            {player.team_name} · {player.position} · {player.age}y
+          <div className="truncate text-xs text-slate-400">
+            {player.team_name} · {player.role || player.position}{player.age ? ` · ${player.age}y` : ""}
           </div>
         </div>
-        <span className="stat ml-auto rounded bg-gold/10 px-2 py-1 text-sm font-bold text-gold">{player.rating}</span>
+        {player.rating != null && (
+          <span className="stat ml-auto rounded bg-gold/10 px-2 py-1 text-sm font-bold text-gold">{player.rating}</span>
+        )}
       </div>
       <div className="mt-3 grid grid-cols-4 gap-2 text-center text-xs">
         <div><div className="stat font-bold text-white">{player.goals}</div><div className="text-slate-500">Goals</div></div>
         <div><div className="stat font-bold text-white">{player.assists}</div><div className="text-slate-500">Assists</div></div>
-        <div><div className="stat font-bold text-white">{player.xg}</div><div className="text-slate-500">xG</div></div>
-        <div><div className="stat font-bold text-white">{player.pass_accuracy}%</div><div className="text-slate-500">Pass</div></div>
+        <div><div className="stat font-bold text-white">{player.xg ?? "–"}</div><div className="text-slate-500">xG</div></div>
+        <div><div className="stat font-bold text-white">{player.pass_accuracy != null ? `${player.pass_accuracy}%` : "–"}</div><div className="text-slate-500">Pass</div></div>
       </div>
       <div className="mt-3 flex items-center justify-between border-t border-navy-700 pt-2">
         <span className="text-[10px] uppercase tracking-wider text-slate-500">Team form</span>

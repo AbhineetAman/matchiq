@@ -2,15 +2,33 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from models.schemas import Player, Team
-from services.football_api import api, get_teams
+from models.schemas import Player, Team, TeamSquad
+from services.football_api import api, get_teams, resolve_team
 
 router = APIRouter(prefix="/api", tags=["players"])
+
+POSITION_ORDER = {"GK": 0, "DF": 1, "MF": 2, "FW": 3}
 
 
 @router.get("/teams", response_model=List[Team])
 def teams():
     return sorted(get_teams(), key=lambda t: (t["group"], -t["rating"]))
+
+
+@router.get("/teams/{ref}", response_model=TeamSquad)
+def team_squad(ref: str):
+    """Full squad for one team: every player plus the head coach.
+
+    `ref` accepts a team id, 3-letter code, or name.
+    """
+    team = resolve_team(ref)
+    if not team:
+        raise HTTPException(status_code=404, detail=f"Team {ref!r} not found")
+    squads = api.squads() or {}
+    coach = (squads.get(team["id"]) or {}).get("coach")
+    players = [p for p in api.players() if p["team_id"] == team["id"]]
+    players.sort(key=lambda p: (POSITION_ORDER.get(p["position"], 9), p["name"]))
+    return {"team": team, "coach": coach, "squad_size": len(players), "players": players}
 
 
 @router.get("/players", response_model=List[Player])
@@ -29,7 +47,16 @@ def players(
     if search:
         items = [p for p in items if search.lower() in p["name"].lower()]
     if sort in ("rating", "goals", "assists", "xg", "pass_accuracy"):
-        items = sorted(items, key=lambda p: -p[sort])
+        # live-mode players have no rating/xg — fall back to goal involvement
+        items = sorted(
+            items,
+            key=lambda p: (
+                -(p.get(sort) or 0),
+                -(p.get("goals") or 0),
+                -(p.get("assists") or 0),
+                p["name"],
+            ),
+        )
     return items[:limit]
 
 

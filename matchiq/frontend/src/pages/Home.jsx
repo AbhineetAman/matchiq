@@ -92,7 +92,9 @@ export default function Home() {
                   <span className="min-w-0 flex-1 truncate font-medium text-slate-200">{p.name}</span>
                   <span className="rounded bg-navy-900 px-1.5 py-0.5 text-[10px] text-slate-400">{p.position}</span>
                   <span className="stat text-xs text-slate-400">⚽ {p.goals}</span>
-                  <span className="stat rounded bg-gold/10 px-2 py-0.5 text-xs font-bold text-gold">{p.rating}</span>
+                  <span className="stat rounded bg-gold/10 px-2 py-0.5 text-xs font-bold text-gold">
+                    {p.rating ?? `🅰 ${p.assists}`}
+                  </span>
                 </div>
               ))}
             </div>

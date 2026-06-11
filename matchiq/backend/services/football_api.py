@@ -18,6 +18,7 @@ from typing import Dict, List, Optional
 import httpx
 
 from .cache import LIVE_TTL, SLOW_TTL, cache
+from .football_data import fd
 
 RAPIDAPI_HOST = "api-football-v1.p.rapidapi.com"
 WORLD_CUP_LEAGUE_ID = 1
@@ -247,21 +248,64 @@ class FootballAPI:
         }
 
     def live_matches(self) -> List[dict]:
+        if fd.enabled:
+            live = fd.matches(get_teams(), _to_ist)
+            if live is not None:
+                return [m for m in live if m["status"] in ("LIVE", "HT")]
         data = self._request("fixtures", {"league": WORLD_CUP_LEAGUE_ID, "season": SEASON, "live": "all"}, LIVE_TTL)
         if data and data.get("response"):
             return [self._transform_fixture(fx) for fx in data["response"]]
         return [m for m in _fallback_matches() if m["status"] in ("LIVE", "HT")]
 
     def matches(self) -> List[dict]:
+        if fd.enabled:
+            live = fd.matches(get_teams(), _to_ist)
+            if live is not None:
+                return live
         data = self._request("fixtures", {"league": WORLD_CUP_LEAGUE_ID, "season": SEASON}, SLOW_TTL)
         if data and data.get("response"):
             return sorted((self._transform_fixture(fx) for fx in data["response"]), key=lambda m: m["kickoff_utc"])
         return _fallback_matches()
 
     def standings(self) -> List[dict]:
+        if fd.enabled:
+            live = fd.standings(get_teams())
+            if live is not None:
+                return live
         return _fallback_standings()
 
+    def _team_form(self) -> Dict[int, List[str]]:
+        return {
+            row["team"]["id"]: row["form"]
+            for grp in self.standings()
+            for row in grp["rows"]
+        }
+
+    def squads(self) -> Optional[Dict[int, dict]]:
+        """{local_team_id: {"coach", "players"}} from the live API, or None."""
+        if fd.enabled:
+            return fd.squads(get_teams())
+        return None
+
     def players(self) -> List[dict]:
+        squads = self.squads()
+        if squads:
+            teams = {t["id"]: t for t in get_teams()}
+            form = self._team_form()
+            out = []
+            for team_id, squad in squads.items():
+                team = teams.get(team_id) or {"name": "Unknown", "flag": "🏳️"}
+                for p in squad["players"]:
+                    out.append(
+                        {
+                            **p,
+                            "team_name": team["name"],
+                            "team_flag": team["flag"],
+                            "form": form.get(team_id, []),
+                        }
+                    )
+            if out:
+                return out
         return _fallback_players()
 
 

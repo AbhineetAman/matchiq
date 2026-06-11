@@ -1,9 +1,11 @@
-"""Background refresh jobs. Only active when a RAPIDAPI_KEY is configured —
-without a key there is nothing to poll, the fallback dataset is always fresh.
+"""Background refresh jobs. Active when a live-data credential is configured
+(FOOTBALL_DATA_TOKEN or RAPIDAPI_KEY) — without one there is nothing to poll,
+the fallback dataset is always fresh.
 """
 
 import logging
 import os
+from datetime import datetime
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -30,14 +32,29 @@ def _refresh_slow():
         log.warning("slow refresh failed: %s", exc)
 
 
+def _refresh_squads():
+    try:
+        squads = api.squads()
+        if squads:
+            total = sum(len(s["players"]) for s in squads.values())
+            log.info("refreshed squads: %d teams, %d players", len(squads), total)
+    except Exception as exc:
+        log.warning("squad refresh failed: %s", exc)
+
+
 def start():
-    if not os.environ.get("RAPIDAPI_KEY", "").strip():
-        log.info("RAPIDAPI_KEY not set — scheduler idle, serving fallback data")
+    has_fd = bool(os.environ.get("FOOTBALL_DATA_TOKEN", "").strip())
+    has_rapid = bool(os.environ.get("RAPIDAPI_KEY", "").strip())
+    if not (has_fd or has_rapid):
+        log.info("no live-data credential set — scheduler idle, serving fallback data")
         return
-    scheduler.add_job(_refresh_live, "interval", minutes=5, id="live")
-    scheduler.add_job(_refresh_slow, "interval", minutes=30, id="slow")
+    scheduler.add_job(_refresh_live, "interval", minutes=2, id="live")
+    scheduler.add_job(_refresh_slow, "interval", minutes=15, id="slow")
+    scheduler.add_job(_refresh_squads, "interval", hours=12, id="squads",
+                      next_run_time=datetime.now())
     scheduler.start()
-    log.info("scheduler started (live: 5 min, slow: 30 min)")
+    log.info("scheduler started (live: 2 min, slow: 15 min, squads: 12 h) — source: %s",
+             "football-data.org" if has_fd else "api-football")
 
 
 def stop():

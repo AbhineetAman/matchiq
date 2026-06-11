@@ -37,7 +37,7 @@ def players(
     position: Optional[str] = Query(None, description="GK | DF | MF | FW"),
     search: Optional[str] = Query(None, description="Name substring"),
     sort: str = Query("rating", description="rating | goals | assists | xg"),
-    limit: int = Query(200, le=500),
+    limit: int = Query(500, le=2000),
 ):
     items = api.players()
     if team:

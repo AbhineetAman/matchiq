@@ -39,8 +39,17 @@ def _load_fallback() -> dict:
     return _fallback
 
 
-def get_teams() -> List[dict]:
+def _base_teams() -> List[dict]:
+    """The bundled roster — mapping base for the live API and demo source."""
     return _load_fallback()["teams"]
+
+
+def get_teams() -> List[dict]:
+    if fd.enabled:
+        live = fd.teams(_base_teams())
+        if live:
+            return live
+    return _base_teams()
 
 
 def get_team(team_id: int) -> Optional[dict]:
@@ -90,7 +99,7 @@ def _score_at(goal_minutes: List[int], minute: int) -> int:
 
 def _fallback_matches(now: Optional[datetime] = None) -> List[dict]:
     now = now or datetime.now(timezone.utc)
-    teams = {t["id"]: t for t in get_teams()}
+    teams = {t["id"]: t for t in _base_teams()}
     out = []
     for m in _load_fallback()["matches"]:
         kickoff = datetime.fromisoformat(m["kickoff_utc"])
@@ -123,7 +132,7 @@ def _fallback_matches(now: Optional[datetime] = None) -> List[dict]:
 def _fallback_standings() -> List[dict]:
     matches = _fallback_matches()
     table: Dict[int, dict] = {}
-    for t in get_teams():
+    for t in _base_teams():
         table[t["id"]] = {
             "group": t["group"], "team": t, "played": 0, "won": 0, "drawn": 0, "lost": 0,
             "goals_for": 0, "goals_against": 0, "goal_diff": 0, "points": 0, "form": [],
@@ -170,7 +179,7 @@ def _fallback_standings() -> List[dict]:
 
 
 def _fallback_players() -> List[dict]:
-    teams = {t["id"]: t for t in get_teams()}
+    teams = {t["id"]: t for t in _base_teams()}
     team_form = {
         row["team"]["id"]: row["form"]
         for grp in _fallback_standings()
@@ -249,7 +258,7 @@ class FootballAPI:
 
     def live_matches(self) -> List[dict]:
         if fd.enabled:
-            live = fd.matches(get_teams(), _to_ist)
+            live = fd.matches(_base_teams(), _to_ist)
             if live is not None:
                 return [m for m in live if m["status"] in ("LIVE", "HT")]
         data = self._request("fixtures", {"league": WORLD_CUP_LEAGUE_ID, "season": SEASON, "live": "all"}, LIVE_TTL)
@@ -259,7 +268,7 @@ class FootballAPI:
 
     def matches(self) -> List[dict]:
         if fd.enabled:
-            live = fd.matches(get_teams(), _to_ist)
+            live = fd.matches(_base_teams(), _to_ist)
             if live is not None:
                 return live
         data = self._request("fixtures", {"league": WORLD_CUP_LEAGUE_ID, "season": SEASON}, SLOW_TTL)
@@ -269,7 +278,7 @@ class FootballAPI:
 
     def standings(self) -> List[dict]:
         if fd.enabled:
-            live = fd.standings(get_teams())
+            live = fd.standings(_base_teams())
             if live is not None:
                 return live
         return _fallback_standings()
@@ -284,7 +293,7 @@ class FootballAPI:
     def squads(self) -> Optional[Dict[int, dict]]:
         """{local_team_id: {"coach", "players"}} from the live API, or None."""
         if fd.enabled:
-            return fd.squads(get_teams())
+            return fd.squads(_base_teams())
         return None
 
     def players(self) -> List[dict]:

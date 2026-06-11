@@ -41,6 +41,11 @@ _NAME_ALIASES = {
     "czech republic": "czechia",
 }
 
+# real qualifiers missing from the bundled demo roster — flags and Dixon-Coles
+# ratings for teams we can't inherit from the fallback dataset
+_TLA_FLAGS = {"SWE": "🇸🇪", "CZE": "🇨🇿", "BIH": "🇧🇦", "COD": "🇨🇩"}
+_EXTRA_RATINGS = {"SWE": 84.0, "CZE": 80.0, "BIH": 78.0, "COD": 76.0}
+
 _STATUS_MAP = {
     "SCHEDULED": "NS", "TIMED": "NS",
     "IN_PLAY": "LIVE", "PAUSED": "HT",
@@ -127,11 +132,31 @@ class FootballData:
 
     # ------------------------------------------------------- team mapping
 
+    def _group_letters(self) -> Dict[int, str]:
+        """{fd_team_id: real group letter} straight from the live standings."""
+        data = self._request(f"competitions/{COMPETITION}/standings", STANDINGS_TTL)
+        out = {}
+        for block in (data or {}).get("standings", []):
+            if block.get("type") != "TOTAL":
+                continue
+            letter = (block.get("group") or "").replace("GROUP_", "").replace("Group ", "")
+            for row in block.get("table", []):
+                team_id = (row.get("team") or {}).get("id")
+                if team_id:
+                    out[team_id] = letter
+        return out
+
     def _team_index(self, local_teams: List[dict]) -> Dict[int, dict]:
-        """Maps football-data team id → our local team dict (with flag, group, rating)."""
+        """Maps football-data team id → our team dict (flag, REAL group, rating).
+
+        Matched teams inherit flag + rating from the bundled roster but take
+        their group from the live draw; real qualifiers missing from the
+        bundle are synthesized.
+        """
         data = self._request(f"competitions/{COMPETITION}/teams", SQUADS_TTL)
         if not data or not data.get("teams"):
             return {}
+        groups = self._group_letters()
         by_code = {t["code"].upper(): t for t in local_teams}
         by_name = {_norm(t["name"]): t for t in local_teams}
         index = {}
@@ -147,14 +172,25 @@ class FootballData:
                 or by_name.get(_NAME_ALIASES.get(short, ""))
             )
             if local:
-                index[fd["id"]] = local
+                index[fd["id"]] = {**local, "group": groups.get(fd["id"], local["group"])}
             else:
-                log.info("no local mapping for football-data team %s (%s)", fd.get("name"), tla)
+                log.info("no local mapping for football-data team %s (%s) — synthesizing", fd.get("name"), tla)
                 index[fd["id"]] = {
-                    "id": 10000 + fd["id"], "name": fd.get("name") or "Unknown",
-                    "code": tla or "TBD", "flag": "🏳️", "group": "", "rating": 78.0,
+                    "id": 10000 + fd["id"],
+                    "name": fd.get("name") or "Unknown",
+                    "code": tla or "TBD",
+                    "flag": _TLA_FLAGS.get(tla, "🏳️"),
+                    "group": groups.get(fd["id"], ""),
+                    "rating": _EXTRA_RATINGS.get(tla, 78.0),
                 }
         return index
+
+    def teams(self, local_teams: List[dict]) -> Optional[List[dict]]:
+        """The real 48-team field with live group letters, or None."""
+        index = self._team_index(local_teams)
+        if not index:
+            return None
+        return sorted(index.values(), key=lambda t: (t["group"], -t["rating"]))
 
     # ------------------------------------------------------------- matches
 

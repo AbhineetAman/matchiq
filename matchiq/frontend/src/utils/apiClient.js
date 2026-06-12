@@ -23,6 +23,8 @@ export const fetchPrediction = (home, away) =>
 export const fetchSimulation = (runs = 1000) =>
   api.get("/api/simulate", { params: { runs } }).then((r) => r.data);
 export const fetchNews = () => api.get("/api/news").then((r) => r.data);
+export const fetchHighlights = () => api.get("/api/highlights").then((r) => r.data);
+export const watchLiveUrl = (matchId) => `${API_URL}/go/live/${matchId}`;
 export const exportUrl = (file) => `${API_URL}/api/export/${file}`;
 
 export default api;

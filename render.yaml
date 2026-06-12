@@ -11,6 +11,12 @@ services:
     envVars:
       - key: FOOTBALL_DATA_TOKEN
         sync: false
+      - key: WATCH_URL
+        sync: false
+      - key: AFFILIATE_URL_TEMPLATE
+        sync: false
+      - key: HIGHLIGHT_CHANNEL_IDS
+        sync: false
       - key: RAPIDAPI_KEY
         sync: false
       - key: CORS_ORIGINS

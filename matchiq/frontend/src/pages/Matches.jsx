@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import LiveScoreCard from "../components/dashboard/LiveScoreCard";
+import { HighlightsStrip, MatchHighlights } from "../components/dashboard/MatchHighlights";
 import HeadToHeadComparison from "../components/analytics/HeadToHeadComparison";
 import PredictionEngine from "../components/analytics/PredictionEngine";
 import XGChart from "../components/analytics/xGChart";
@@ -71,6 +72,7 @@ function MatchModal({ match, onClose }) {
 
         {match.home && match.away ? (
           <>
+            <MatchHighlights match={match} />
             <PredictionEngine home={match.home.id} away={match.away.id} />
             {standings.data && (
               <HeadToHeadComparison
@@ -138,6 +140,8 @@ export default function Matches() {
           ⬇ Download CSV
         </a>
       </div>
+
+      <HighlightsStrip />
 
       <div className="flex flex-wrap items-center gap-2">
         {FILTERS.map((f) => (

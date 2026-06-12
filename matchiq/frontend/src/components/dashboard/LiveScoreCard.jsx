@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { toISTDate, toISTTime } from "../../utils/timeUtils";
+import { watchLiveUrl } from "../../utils/apiClient";
 import ShareCard from "../widgets/ShareCard";
 
 function StatusBadge({ match }) {
@@ -61,6 +62,18 @@ export default function LiveScoreCard({ match, onClick, index = 0 }) {
         <TeamRow team={match.home} score={match.home_score} winner={homeWin} />
         <TeamRow team={match.away} score={match.away_score} winner={awayWin} />
       </div>
+      {(match.status === "LIVE" || match.status === "HT") && (
+        <a
+          href={watchLiveUrl(match.id)}
+          target="_blank"
+          rel="sponsored noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          title="Opens the official broadcast stream (may be an affiliate link)"
+          className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-pitch/15 py-2 text-sm font-bold text-pitch transition hover:bg-pitch/25"
+        >
+          <span className="h-2 w-2 animate-livepulse rounded-full bg-pitch" /> Watch LIVE
+        </a>
+      )}
       <div className="mt-3 flex items-center justify-between border-t border-navy-700 pt-2.5 text-xs text-slate-500">
         <span className="truncate">📍 {match.venue}, {match.city}</span>
         <ShareCard match={match} />

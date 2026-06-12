@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
-from routers import export, matches, news, players, predictions, standings  # noqa: E402
+from routers import export, matches, news, players, predictions, standings, watch  # noqa: E402
 from services import scheduler  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -46,6 +46,7 @@ app.include_router(players.router)
 app.include_router(predictions.router)
 app.include_router(export.router)
 app.include_router(news.router)
+app.include_router(watch.router)
 
 
 @app.get("/health", tags=["meta"])
@@ -64,7 +65,7 @@ def root():
             "/api/teams", "/api/players", "/api/players/{id}",
             "/api/predictions/{home}/{away}", "/api/simulate",
             "/api/export/matches.csv", "/api/export/standings.csv", "/api/export/players.csv",
-            "/api/news",
+            "/api/news", "/api/highlights", "/go/live/{match_id}",
             "/health",
         ],
     }

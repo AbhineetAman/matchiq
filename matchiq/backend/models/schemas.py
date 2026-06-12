@@ -64,6 +64,8 @@ class Player(BaseModel):
     date_of_birth: Optional[str] = None
     goals: int
     assists: int
+    yellow_cards: int = 0
+    red_cards: int = 0
     # advanced metrics are only present in demo mode — the free live feed
     # does not provide them, and we never fabricate live stats
     xg: Optional[float] = None

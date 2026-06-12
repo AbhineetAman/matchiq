@@ -42,6 +42,15 @@ def _refresh_squads():
         log.warning("squad refresh failed: %s", exc)
 
 
+def _refresh_cards():
+    try:
+        from .wiki_stats import get_cards
+        cards = get_cards()
+        log.info("refreshed discipline stats: %d carded players", len(cards))
+    except Exception as exc:
+        log.warning("cards refresh failed: %s", exc)
+
+
 def start():
     has_fd = bool(os.environ.get("FOOTBALL_DATA_TOKEN", "").strip())
     has_rapid = bool(os.environ.get("RAPIDAPI_KEY", "").strip())
@@ -51,6 +60,8 @@ def start():
     scheduler.add_job(_refresh_live, "interval", minutes=2, id="live")
     scheduler.add_job(_refresh_slow, "interval", minutes=15, id="slow")
     scheduler.add_job(_refresh_squads, "interval", hours=12, id="squads",
+                      next_run_time=datetime.now())
+    scheduler.add_job(_refresh_cards, "interval", minutes=20, id="cards",
                       next_run_time=datetime.now())
     scheduler.start()
     log.info("scheduler started (live: 2 min, slow: 15 min, squads: 12 h) — source: %s",

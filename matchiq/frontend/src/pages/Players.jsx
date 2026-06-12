@@ -64,8 +64,18 @@ function PlayerCard({ player, selected, onToggle, index }) {
       <div className="mt-3 grid grid-cols-4 gap-2 text-center text-xs">
         <div><div className="stat font-bold text-white">{player.goals}</div><div className="text-slate-500">Goals</div></div>
         <div><div className="stat font-bold text-white">{player.assists}</div><div className="text-slate-500">Assists</div></div>
+        <div>
+          <div className="stat font-bold text-white">
+            {(player.yellow_cards || 0) + (player.red_cards || 0) > 0 ? (
+              <>
+                {player.yellow_cards > 0 && <span className="text-amber">🟨{player.yellow_cards}</span>}
+                {player.red_cards > 0 && <span className="text-danger"> 🟥{player.red_cards}</span>}
+              </>
+            ) : "–"}
+          </div>
+          <div className="text-slate-500">Cards</div>
+        </div>
         <div><div className="stat font-bold text-white">{player.xg ?? "–"}</div><div className="text-slate-500">xG</div></div>
-        <div><div className="stat font-bold text-white">{player.pass_accuracy != null ? `${player.pass_accuracy}%` : "–"}</div><div className="text-slate-500">Pass</div></div>
       </div>
       <div className="mt-3 flex items-center justify-between border-t border-navy-700 pt-2">
         <span className="text-[10px] uppercase tracking-wider text-slate-500">Team form</span>

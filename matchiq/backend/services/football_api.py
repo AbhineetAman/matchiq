@@ -19,7 +19,8 @@ import httpx
 
 from .cache import LIVE_TTL, SLOW_TTL, cache
 from .football_data import fd
-from .photos import photo_for
+from .photos import norm, photo_for
+from .wiki_stats import cards_cached
 
 RAPIDAPI_HOST = "api-football-v1.p.rapidapi.com"
 WORLD_CUP_LEAGUE_ID = 1
@@ -298,6 +299,20 @@ class FootballAPI:
         return None
 
     def players(self) -> List[dict]:
+        cards = cards_cached()
+
+        def enrich(p: dict) -> dict:
+            # Wikipedia writes East-Asian names family-name-first ("Lee Gi-hyuk"),
+            # the live feed western-order ("Gi-hyuk Lee") — try both
+            reversed_name = " ".join(reversed(p["name"].split()))
+            c = cards.get(norm(p["name"])) or cards.get(norm(reversed_name)) or {}
+            return {
+                **p,
+                "photo": photo_for(p["name"]),
+                "yellow_cards": c.get("yellow", 0),
+                "red_cards": c.get("red", 0),
+            }
+
         squads = self.squads()
         if squads:
             teams = {t["id"]: t for t in get_teams()}
@@ -307,17 +322,16 @@ class FootballAPI:
                 team = teams.get(team_id) or {"name": "Unknown", "flag": "🏳️"}
                 for p in squad["players"]:
                     out.append(
-                        {
+                        enrich({
                             **p,
                             "team_name": team["name"],
                             "team_flag": team["flag"],
                             "form": form.get(team_id, []),
-                            "photo": photo_for(p["name"]),
-                        }
+                        })
                     )
             if out:
                 return out
-        return [{**p, "photo": photo_for(p["name"])} for p in _fallback_players()]
+        return [enrich(p) for p in _fallback_players()]
 
 
 api = FootballAPI()

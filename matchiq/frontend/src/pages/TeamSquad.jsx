@@ -35,6 +35,12 @@ function PlayerRow({ player, index }) {
           ⚽ {player.goals} · 🅰 {player.assists}
         </span>
       )}
+      {(player.yellow_cards > 0 || player.red_cards > 0) && (
+        <span className="stat shrink-0 rounded bg-navy-900 px-2 py-0.5 text-xs">
+          {player.yellow_cards > 0 && <>🟨{player.yellow_cards}</>}
+          {player.red_cards > 0 && <> 🟥{player.red_cards}</>}
+        </span>
+      )}
       {player.rating != null && (
         <span className="stat shrink-0 rounded bg-gold/10 px-2 py-0.5 text-xs font-bold text-gold">
           {player.rating}

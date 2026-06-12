@@ -27,7 +27,7 @@ COMPETITION = "WC"
 
 MATCHES_TTL = 60          # live scores
 STANDINGS_TTL = 5 * 60
-SCORERS_TTL = 30 * 60
+SCORERS_TTL = 10 * 60
 SQUADS_TTL = 7 * 24 * 3600  # squads barely change mid-tournament
 
 # our fallback names → football-data.org names (only where they differ)

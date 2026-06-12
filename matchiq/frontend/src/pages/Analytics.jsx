@@ -94,6 +94,21 @@ export default function Analytics() {
         points: r.points,
       }));
 
+    const carded = players.data
+      .filter((p) => (p.yellow_cards || 0) + (p.red_cards || 0) > 0)
+      .sort((a, b) => (b.red_cards - a.red_cards) || (b.yellow_cards - a.yellow_cards))
+      .slice(0, 8);
+    const teamCards = Object.values(
+      players.data.reduce((acc, p) => {
+        const y = p.yellow_cards || 0, r = p.red_cards || 0;
+        if (!y && !r) return acc;
+        (acc[p.team_id] ||= { name: `${p.team_flag} ${p.team_name}`, yellow: 0, red: 0 });
+        acc[p.team_id].yellow += y;
+        acc[p.team_id].red += r;
+        return acc;
+      }, {})
+    ).sort((a, b) => (b.red - a.red) || (b.yellow - a.yellow)).slice(0, 8);
+
     const squadAges = Object.values(
       players.data.reduce((acc, p) => {
         if (!p.age) return acc;
@@ -117,6 +132,8 @@ export default function Analytics() {
       },
       goalsByGroup,
       scorers,
+      carded,
+      teamCards,
       attackDefence,
       youngest: squadAges.slice(0, 8),
       oldest: squadAges.slice(-8).reverse(),
@@ -217,6 +234,45 @@ export default function Analytics() {
           ) : (
             <div className="grid h-[320px] place-items-center text-sm text-slate-500">
               Appears once group games are played.
+            </div>
+          )}
+        </ChartCard>
+
+        <ChartCard title="🟨🟥 Discipline watch" subtitle="Cards from live match data — bookings, sending-offs and team totals">
+          {data.carded.length ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="min-w-0">
+                <div className="mb-2 text-[11px] uppercase tracking-wider text-slate-500">Players</div>
+                <div className="space-y-1.5">
+                  {data.carded.map((p) => (
+                    <div key={p.id} className="flex items-center gap-2 text-xs">
+                      <span className="min-w-0 flex-1 truncate text-slate-300">{p.team_flag} {p.name}</span>
+                      <span className="stat shrink-0">
+                        {p.yellow_cards > 0 && <span className="text-amber">🟨{p.yellow_cards}</span>}
+                        {p.red_cards > 0 && <span className="text-danger"> 🟥{p.red_cards}</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="mb-2 text-[11px] uppercase tracking-wider text-slate-500">Teams</div>
+                <div className="space-y-1.5">
+                  {data.teamCards.map((t) => (
+                    <div key={t.name} className="flex items-center gap-2 text-xs">
+                      <span className="min-w-0 flex-1 truncate text-slate-300">{t.name}</span>
+                      <span className="stat shrink-0">
+                        {t.yellow > 0 && <span className="text-amber">🟨{t.yellow}</span>}
+                        {t.red > 0 && <span className="text-danger"> 🟥{t.red}</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid h-[160px] place-items-center text-sm text-slate-500">
+              No cards shown yet — referees have been kind.
             </div>
           )}
         </ChartCard>

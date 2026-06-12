@@ -26,6 +26,7 @@ BASE = "https://api.football-data.org/v4"
 COMPETITION = "WC"
 
 MATCHES_TTL = 60          # live scores
+DETAILS_TTL = 2 * 60      # single-match timeline/lineups
 STANDINGS_TTL = 5 * 60
 SCORERS_TTL = 10 * 60
 SQUADS_TTL = 7 * 24 * 3600  # squads barely change mid-tournament
@@ -236,6 +237,10 @@ class FootballData:
                 }
             )
         return sorted(out, key=lambda m: m["kickoff_utc"])
+
+    def match_detail(self, match_id: int) -> Optional[dict]:
+        """The v4 match resource — goals, bookings, substitutions, lineups."""
+        return self._request(f"matches/{match_id}", DETAILS_TTL)
 
     # ----------------------------------------------------------- standings
 

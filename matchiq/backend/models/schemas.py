@@ -30,6 +30,49 @@ class Match(BaseModel):
     away_score: Optional[int] = None
 
 
+class TimelineEvent(BaseModel):
+    minute: int
+    injury_time: Optional[int] = None
+    type: str  # goal | own_goal | penalty_goal | yellow | red | sub
+    team: str  # home | away
+    player: Optional[str] = None
+    detail: Optional[str] = None  # assist for goals, player going off for subs
+    score: Optional[str] = None  # running score after a goal, e.g. "2 - 1"
+
+
+class LineupPlayer(BaseModel):
+    name: str
+    position: Optional[str] = None
+    shirt: Optional[int] = None
+
+
+class TeamLineup(BaseModel):
+    formation: Optional[str] = None
+    coach: Optional[str] = None
+    starting: List[LineupPlayer] = []
+    bench: List[LineupPlayer] = []
+    # demo mode only knows each squad's key players, not a full XI
+    is_full_xi: bool = True
+
+
+class StatLine(BaseModel):
+    label: str
+    home: str
+    away: str
+
+
+class MatchDetails(BaseModel):
+    match_id: int
+    available: bool
+    source: str  # live | demo
+    timeline: List[TimelineEvent] = []
+    home_lineup: Optional[TeamLineup] = None
+    away_lineup: Optional[TeamLineup] = None
+    stats: List[StatLine] = []
+    referee: Optional[str] = None
+    note: Optional[str] = None  # data-provenance caveat shown under the stats
+
+
 class StandingRow(BaseModel):
     group: str
     position: int

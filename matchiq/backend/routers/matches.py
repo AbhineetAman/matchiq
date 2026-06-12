@@ -3,8 +3,9 @@ from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from models.schemas import Match
+from models.schemas import Match, MatchDetails
 from services.football_api import IST, api
+from services.match_details import match_details as build_match_details
 
 router = APIRouter(prefix="/api/matches", tags=["matches"])
 
@@ -49,6 +50,12 @@ def all_matches(
                 if now_ist.date() <= datetime.fromisoformat(m["kickoff_utc"]).astimezone(IST).date() <= end.date()
             ]
     return matches
+
+
+@router.get("/{match_id}/details", response_model=MatchDetails)
+def match_details(match_id: int):
+    """Timeline, lineups and team stats for a played (or in-play) match."""
+    return build_match_details(match_id)
 
 
 @router.get("/{match_id}", response_model=Match)

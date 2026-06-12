@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import LiveScoreCard from "../components/dashboard/LiveScoreCard";
+import MatchDetailTabs from "../components/dashboard/MatchDetailTabs";
 import { HighlightsStrip, MatchHighlights } from "../components/dashboard/MatchHighlights";
 import HeadToHeadComparison from "../components/analytics/HeadToHeadComparison";
 import PredictionEngine from "../components/analytics/PredictionEngine";
@@ -73,7 +74,13 @@ function MatchModal({ match, onClose }) {
         {match.home && match.away ? (
           <>
             <MatchHighlights match={match} />
-            <PredictionEngine home={match.home.id} away={match.away.id} />
+            {/* prediction makes no sense once the match has kicked off — show
+                the real scorecard (timeline / lineups / stats) instead */}
+            {["FT", "LIVE", "HT"].includes(match.status) ? (
+              <MatchDetailTabs match={match} />
+            ) : (
+              <PredictionEngine home={match.home.id} away={match.away.id} />
+            )}
             {standings.data && (
               <HeadToHeadComparison
                 homeTeam={match.home}

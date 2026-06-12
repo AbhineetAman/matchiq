@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { quickPredict } from "../../utils/poissonModel";
 
 const ROUND_NAMES = ["Round of 32", "Round of 16", "Quarter-finals", "Semi-finals", "Final"];
@@ -28,6 +29,8 @@ function TeamSlot({ team, picked, eliminated, pct, onPick }) {
 
 export default function TournamentBracket({ teams }) {
   const [picks, setPicks] = useState({});
+  const [params] = useSearchParams();
+  const loadedFromUrl = useRef(false);
 
   const seeds = useMemo(() => {
     const sorted = [...teams].sort((a, b) => b.rating - a.rating).slice(0, 32);
@@ -35,6 +38,30 @@ export default function TournamentBracket({ teams }) {
     for (let i = 0; i < 16; i++) pairs.push([sorted[i], sorted[31 - i]]);
     return pairs;
   }, [teams]);
+
+  // A shared link carries the picks as ?b=<31 winner ids> — rebuild them,
+  // validating each id against the two teams actually feeding that slot.
+  useEffect(() => {
+    const encoded = params.get("b");
+    if (!encoded || !seeds.length || loadedFromUrl.current) return;
+    loadedFromUrl.current = true;
+    const ids = encoded.split(".").map((s) => (s ? Number(s) : null));
+    const next = {};
+    let current = seeds;
+    let idx = 0;
+    for (let r = 0; r < 5; r++) {
+      const upcoming = [];
+      current.forEach(([a, b], m) => {
+        const id = ids[idx++];
+        const winner = a && a.id === id ? a : b && b.id === id ? b : null;
+        if (winner) next[`${r}-${m}`] = winner;
+        if (m % 2 === 0) upcoming.push([winner, null]);
+        else upcoming[upcoming.length - 1][1] = winner;
+      });
+      current = upcoming;
+    }
+    setPicks(next);
+  }, [params, seeds]);
 
   // Round r match m is fed by round r-1 matches 2m and 2m+1.
   const rounds = useMemo(() => {
@@ -91,18 +118,33 @@ export default function TournamentBracket({ teams }) {
     setPicks(next);
   };
 
+  const shareUrl = () => {
+    const slots = [];
+    for (let r = 0; r < 5; r++) {
+      for (let m = 0; m < 16 >> r; m++) slots.push(picks[`${r}-${m}`]?.id ?? "");
+    }
+    return `${window.location.origin}/bracket?b=${slots.join(".").replace(/\.+$/, "")}`;
+  };
+
   const copySummary = async () => {
     const lines = ["🏆 My FIFA 2026 bracket (via MatchIQ)"];
-    rounds.forEach((matches, r) => {
-      const winners = matches.map((_, m) => picks[`${r}-${m}`]).filter(Boolean);
-      if (winners.length) lines.push(`${ROUND_NAMES[r]} winners: ${winners.map((t) => t.code).join(", ")}`);
-    });
-    if (champion) lines.push(`Champion: ${champion.flag} ${champion.name}`);
+    if (champion) lines.push(`My champion: ${champion.flag} ${champion.name}`);
+    const url = shareUrl();
+    lines.push(`See my full bracket: ${url}`);
+    const payload = lines.join("\n");
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "My FIFA 2026 bracket", text: payload, url });
+        return;
+      } catch {
+        /* user dismissed the share sheet — fall through to clipboard */
+      }
+    }
     try {
-      await navigator.clipboard.writeText(lines.join("\n"));
-      alert("Bracket copied — paste it anywhere!");
+      await navigator.clipboard.writeText(payload);
+      alert("Bracket link copied — anyone who opens it sees your full bracket!");
     } catch {
-      /* clipboard unavailable */
+      prompt("Copy your bracket link:", url);
     }
   };
 

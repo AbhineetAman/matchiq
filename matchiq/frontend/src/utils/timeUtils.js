@@ -16,6 +16,15 @@ export function toISTString(isoUtc, opts = {}) {
   );
 }
 
+export function toISTDate(isoUtc) {
+  return new Date(isoUtc).toLocaleDateString("en-IN", {
+    timeZone: IST_TZ,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
+
 export function toISTTime(isoUtc) {
   return (
     new Date(isoUtc).toLocaleTimeString("en-IN", {

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { toISTTime } from "../../utils/timeUtils";
+import { toISTDate, toISTTime } from "../../utils/timeUtils";
 import ShareCard from "../widgets/ShareCard";
 
 function StatusBadge({ match }) {
@@ -50,8 +50,11 @@ export default function LiveScoreCard({ match, onClick, index = 0 }) {
       onClick={onClick}
       className={`card p-4 transition hover:border-gold/50 ${onClick ? "cursor-pointer" : ""}`}
     >
-      <div className="mb-3 flex items-center justify-between text-xs text-slate-400">
-        <span>{match.group ? `Group ${match.group}` : match.stage}</span>
+      <div className="mb-3 flex items-center justify-between gap-2 text-xs text-slate-400">
+        <span className="truncate">
+          {match.group ? `Group ${match.group}` : match.stage}
+          <span className="text-slate-500"> · {toISTDate(match.kickoff_utc)}</span>
+        </span>
         <StatusBadge match={match} />
       </div>
       <div className="space-y-2.5">

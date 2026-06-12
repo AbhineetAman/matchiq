@@ -211,7 +211,7 @@ class FootballData:
                 minute = min(90, elapsed - 15 if elapsed > 60 else elapsed)
             elif status == "HT":
                 minute = 45
-            group = (fx.get("group") or "").replace("Group ", "") or None
+            group = (fx.get("group") or "").replace("GROUP_", "").replace("Group ", "") or None
             score = fx.get("score", {}).get("fullTime", {})
             home = index.get((fx.get("homeTeam") or {}).get("id"))
             away = index.get((fx.get("awayTeam") or {}).get("id"))

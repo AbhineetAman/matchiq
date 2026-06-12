@@ -19,12 +19,12 @@ export function MatchHighlights({ match }) {
   if (!match.home || !match.away || !["FT", "LIVE", "HT"].includes(match.status)) return null;
 
   const entry = data?.find((h) => h.match_id === match.id);
-  if (!entry) {
+  if (!entry || !entry.best) {
     if (match.status !== "FT") return null;
     const q = encodeURIComponent(`${match.home.name} vs ${match.away.name} FIFA World Cup 2026 highlights`);
     return (
       <a
-        href={`https://www.youtube.com/results?search_query=${q}`}
+        href={entry?.search_url || `https://www.youtube.com/results?search_query=${q}`}
         target="_blank"
         rel="noopener noreferrer"
         className="card flex items-center justify-center gap-2 p-4 text-sm text-slate-300 transition hover:border-gold/50"
@@ -80,37 +80,46 @@ export function MatchHighlights({ match }) {
   );
 }
 
-/* Thumbnail strip of the latest matched videos (Matches page). */
+/* Strip of every recent match, newest first — official video thumbnail when
+   matched, branded search-fallback card otherwise. */
 export function HighlightsStrip() {
   const { data } = useHighlights();
   if (!data?.length) return null;
-  const items = data.slice(0, 4);
+  const items = data.slice(0, 8);
   return (
     <section>
-      <h2 className="mb-3 text-lg font-bold text-white">🎬 Latest highlights</h2>
+      <h2 className="mb-3 text-lg font-bold text-white">🎬 Match highlights</h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {items.map((h) => (
           <a
             key={h.match_id}
-            href={h.best.url}
+            href={h.best ? h.best.url : h.search_url}
             target="_blank"
             rel="noopener noreferrer"
             className="card group overflow-hidden transition hover:border-gold/50"
           >
             <div className="relative aspect-video overflow-hidden bg-navy-900">
-              <img
-                src={h.best.thumbnail}
-                alt={h.best.title}
-                loading="lazy"
-                className="h-full w-full object-cover transition group-hover:scale-105"
-              />
+              {h.best ? (
+                <img
+                  src={h.best.thumbnail}
+                  alt={h.best.title}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition group-hover:scale-105"
+                />
+              ) : (
+                <div className="grid h-full w-full place-items-center text-5xl">
+                  {h.home_flag} <span className="text-2xl text-slate-600">vs</span> {h.away_flag}
+                </div>
+              )}
               <span className="absolute inset-0 grid place-items-center text-4xl opacity-80">▶️</span>
             </div>
             <div className="p-3">
               <div className="truncate text-sm font-semibold text-slate-200">
                 {h.home} vs {h.away}
               </div>
-              <div className="mt-0.5 line-clamp-1 text-xs text-slate-500">{h.best.title}</div>
+              <div className="mt-0.5 line-clamp-1 text-xs text-slate-500">
+                {h.best ? h.best.title : "Find highlights on YouTube →"}
+              </div>
             </div>
           </a>
         ))}

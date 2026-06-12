@@ -9,8 +9,9 @@ key. Channels are configurable via HIGHLIGHT_CHANNEL_IDS (comma-sep).
 
 import logging
 import os
+import urllib.parse
 import xml.etree.ElementTree as ET
-from typing import Dict, List
+from typing import List
 
 import httpx
 
@@ -94,17 +95,41 @@ def _name_variants(team_name: str) -> List[str]:
     return [name] + _TITLE_ALIASES.get(name, [])
 
 
-def for_matches(matches: List[dict]) -> List[dict]:
-    """Attach official videos to finished/live matches by title matching.
+MATCH_VIDEOS_TTL = 60 * 24 * 3600  # once matched, remember for the tournament
 
-    A video belongs to a match when both team names (or aliases) appear in
-    its title. 'Highlights' videos outrank single-goal clips.
+# Committed snapshot of already-matched videos: Render's disk is ephemeral
+# (cache resets on deploy) and channel RSS only shows the last ~15 uploads,
+# so without this seed, videos found before a deploy would be lost forever.
+_SEED_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "highlights_seed.json")
+_seed = None
+
+
+def _seed_videos(match_id: int) -> List[dict]:
+    global _seed
+    if _seed is None:
+        try:
+            import json
+            with open(_SEED_PATH, encoding="utf-8") as fh:
+                _seed = json.load(fh)
+        except FileNotFoundError:
+            _seed = {}
+    return _seed.get(str(match_id), [])
+
+
+def for_matches(matches: List[dict]) -> List[dict]:
+    """Every recent played/live match, newest first, with official videos
+    attached when found.
+
+    Channel RSS only exposes the last ~15 uploads, so matches slide out of
+    the feed window as new videos are posted — matched videos are therefore
+    persisted per match and merged on every refresh. Matches with no video
+    (yet) still appear, carrying a YouTube search URL the UI can fall back to.
     """
     videos = _videos()
+    played = [m for m in matches if m["status"] in ("FT", "LIVE", "HT") and m["home"] and m["away"]]
+    played.sort(key=lambda m: m["kickoff_utc"], reverse=True)
     out = []
-    for m in matches:
-        if m["status"] not in ("FT", "LIVE", "HT") or not m["home"] or not m["away"]:
-            continue
+    for m in played:
         home_v = _name_variants(m["home"]["name"])
         away_v = _name_variants(m["away"]["name"])
         hits = []
@@ -112,18 +137,31 @@ def for_matches(matches: List[dict]) -> List[dict]:
             t = v["title"].lower()
             if any(h in t for h in home_v) and any(a in t for a in away_v):
                 hits.append(v)
-        if not hits:
-            continue
-        hits.sort(key=lambda v: v["published"] or "", reverse=True)   # newest first…
-        hits.sort(key=lambda v: "highlight" not in v["title"].lower())  # …but 'Highlights' outrank goal clips
-        best = hits[0]
+        # merge: committed seed < cached finds < fresh feed hits
+        key = f"hlmatch:{m['id']}"
+        merged = {v["video_id"]: v for v in _seed_videos(m["id"])}
+        for v in (cache.get(key, allow_stale=True) or []):
+            merged[v["video_id"]] = v
+        for v in hits:
+            merged[v["video_id"]] = v
+        all_videos = list(merged.values())
+        if all_videos:
+            cache.set(key, all_videos, MATCH_VIDEOS_TTL)
+        all_videos.sort(key=lambda v: v["published"] or "", reverse=True)   # newest first…
+        all_videos.sort(key=lambda v: "highlight" not in v["title"].lower())  # …'Highlights' outrank goal clips
+        query = urllib.parse.quote(f"{m['home']['name']} vs {m['away']['name']} FIFA World Cup 2026 highlights")
         out.append(
             {
                 "match_id": m["id"],
                 "home": m["home"]["name"],
                 "away": m["away"]["name"],
-                "videos": hits[:4],
-                "best": best,
+                "home_flag": m["home"].get("flag", ""),
+                "away_flag": m["away"].get("flag", ""),
+                "status": m["status"],
+                "kickoff_utc": m["kickoff_utc"],
+                "videos": all_videos[:4],
+                "best": all_videos[0] if all_videos else None,
+                "search_url": f"https://www.youtube.com/results?search_query={query}",
             }
         )
     return out

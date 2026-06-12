@@ -39,21 +39,42 @@ export default function TournamentBracket({ teams }) {
     return pairs;
   }, [teams]);
 
-  // A shared link carries the picks as ?b=<31 winner ids> — rebuild them,
-  // validating each id against the two teams actually feeding that slot.
+  // A shared link carries all 31 picks as ?b=<base36 code>: each slot is a
+  // base-3 digit (0 = no pick, 1 = top feeder, 2 = bottom feeder). The legacy
+  // dotted-id format is still accepted. Every pick is validated against the
+  // teams actually feeding that slot, so tampered links degrade safely.
   useEffect(() => {
     const encoded = params.get("b");
     if (!encoded || !seeds.length || loadedFromUrl.current) return;
     loadedFromUrl.current = true;
-    const ids = encoded.split(".").map((s) => (s ? Number(s) : null));
+
+    let digitFor;
+    if (encoded.includes(".")) {
+      const ids = encoded.split(".").map((s) => (s ? Number(s) : null));
+      digitFor = (idx, a, b) => (a && a.id === ids[idx] ? 1 : b && b.id === ids[idx] ? 2 : 0);
+    } else {
+      let v = 0n;
+      for (const c of encoded.toLowerCase()) {
+        const d = parseInt(c, 36);
+        if (Number.isNaN(d)) return;
+        v = v * 36n + BigInt(d);
+      }
+      const digits = Array(31).fill(0);
+      for (let i = 30; i >= 0; i--) {
+        digits[i] = Number(v % 3n);
+        v /= 3n;
+      }
+      digitFor = (idx) => digits[idx];
+    }
+
     const next = {};
     let current = seeds;
     let idx = 0;
     for (let r = 0; r < 5; r++) {
       const upcoming = [];
       current.forEach(([a, b], m) => {
-        const id = ids[idx++];
-        const winner = a && a.id === id ? a : b && b.id === id ? b : null;
+        const d = digitFor(idx++, a, b);
+        const winner = d === 1 ? a : d === 2 ? b : null;
         if (winner) next[`${r}-${m}`] = winner;
         if (m % 2 === 0) upcoming.push([winner, null]);
         else upcoming[upcoming.length - 1][1] = winner;
@@ -119,11 +140,16 @@ export default function TournamentBracket({ teams }) {
   };
 
   const shareUrl = () => {
-    const slots = [];
+    let v = 0n;
     for (let r = 0; r < 5; r++) {
-      for (let m = 0; m < 16 >> r; m++) slots.push(picks[`${r}-${m}`]?.id ?? "");
+      for (let m = 0; m < 16 >> r; m++) {
+        const [a, b] = rounds[r][m];
+        const winner = picks[`${r}-${m}`];
+        const digit = winner && a && winner.id === a.id ? 1n : winner && b && winner.id === b.id ? 2n : 0n;
+        v = v * 3n + digit;
+      }
     }
-    return `${window.location.origin}/bracket?b=${slots.join(".").replace(/\.+$/, "")}`;
+    return `${window.location.origin}/bracket?b=${v.toString(36)}`;
   };
 
   const copySummary = async () => {

@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import PlayerHeatmap from "../components/analytics/PlayerHeatmap";
 import TeamFormGuide from "../components/analytics/TeamFormGuide";
+import PlayerAvatar from "../components/common/PlayerAvatar";
 import LoadingSkeleton from "../components/common/LoadingSkeleton";
 import { ErrorState } from "../components/common/ErrorBoundary";
 import { useTeams } from "../hooks/useStandings";
@@ -49,9 +50,7 @@ function PlayerCard({ player, selected, onToggle, index }) {
       className={`card p-4 text-left transition hover:border-gold/50 ${selected ? "border-pitch ring-1 ring-pitch" : ""}`}
     >
       <div className="flex items-center gap-3">
-        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-navy-700 text-2xl">
-          {player.team_flag}
-        </div>
+        <PlayerAvatar player={player} size="md" />
         <div className="min-w-0">
           <div className="truncate font-semibold text-white">{player.name}</div>
           <div className="truncate text-xs text-slate-400">

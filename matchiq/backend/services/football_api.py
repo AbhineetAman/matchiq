@@ -19,6 +19,7 @@ import httpx
 
 from .cache import LIVE_TTL, SLOW_TTL, cache
 from .football_data import fd
+from .photos import photo_for
 
 RAPIDAPI_HOST = "api-football-v1.p.rapidapi.com"
 WORLD_CUP_LEAGUE_ID = 1
@@ -311,11 +312,12 @@ class FootballAPI:
                             "team_name": team["name"],
                             "team_flag": team["flag"],
                             "form": form.get(team_id, []),
+                            "photo": photo_for(p["name"]),
                         }
                     )
             if out:
                 return out
-        return _fallback_players()
+        return [{**p, "photo": photo_for(p["name"])} for p in _fallback_players()]
 
 
 api = FootballAPI()

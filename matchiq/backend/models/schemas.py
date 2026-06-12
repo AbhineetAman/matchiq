@@ -58,6 +58,7 @@ class Player(BaseModel):
     team_flag: str
     position: str  # GK | DF | MF | FW
     role: Optional[str] = None  # detailed position from the live API
+    photo: Optional[str] = None  # Wikimedia Commons thumbnail
     age: int
     nationality: Optional[str] = None
     date_of_birth: Optional[str] = None

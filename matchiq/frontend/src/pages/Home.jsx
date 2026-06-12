@@ -5,6 +5,7 @@ import MatchCountdown from "../components/dashboard/MatchCountdown";
 import TodayMatches from "../components/dashboard/TodayMatches";
 import GroupStandingsTable from "../components/dashboard/GroupStandingsTable";
 import LoadingSkeleton from "../components/common/LoadingSkeleton";
+import PlayerAvatar from "../components/common/PlayerAvatar";
 import { ErrorState } from "../components/common/ErrorBoundary";
 import { useLiveScores, useTodayMatches } from "../hooks/useLiveScores";
 import { useStandings } from "../hooks/useStandings";
@@ -88,7 +89,7 @@ export default function Home() {
               {trending.data.map((p, i) => (
                 <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
                   <span className="stat w-5 text-slate-500">{i + 1}</span>
-                  <span className="text-lg">{p.team_flag}</span>
+                  <PlayerAvatar player={p} size="sm" />
                   <span className="min-w-0 flex-1 truncate font-medium text-slate-200">{p.name}</span>
                   <span className="rounded bg-navy-900 px-1.5 py-0.5 text-[10px] text-slate-400">{p.position}</span>
                   <span className="stat text-xs text-slate-400">⚽ {p.goals}</span>

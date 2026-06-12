@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import LoadingSkeleton from "../components/common/LoadingSkeleton";
+import PlayerAvatar from "../components/common/PlayerAvatar";
 import { ErrorState } from "../components/common/ErrorBoundary";
 import { fetchTeamSquad } from "../utils/apiClient";
 
@@ -20,6 +21,7 @@ function PlayerRow({ player, index }) {
       transition={{ duration: 0.15, delay: Math.min(index, 12) * 0.02 }}
       className="flex items-center gap-3 px-4 py-2.5 text-sm"
     >
+      <PlayerAvatar player={player} size="sm" />
       <div className="min-w-0 flex-1">
         <div className="truncate font-medium text-slate-200">{player.name}</div>
         <div className="truncate text-xs text-slate-500">

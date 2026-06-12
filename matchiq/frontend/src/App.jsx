@@ -10,6 +10,7 @@ import TeamSquad from "./pages/TeamSquad";
 import Players from "./pages/Players";
 import Predictions from "./pages/Predictions";
 import Standings from "./pages/Standings";
+import Analytics from "./pages/Analytics";
 import Bracket from "./pages/Bracket";
 
 function WidgetPage() {
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/matches" element={<Matches />} />
             <Route path="/standings" element={<Standings />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="/predictions" element={<Predictions />} />
             <Route path="/players" element={<Players />} />
             <Route path="/teams" element={<Teams />} />

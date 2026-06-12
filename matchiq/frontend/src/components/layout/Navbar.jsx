@@ -7,6 +7,7 @@ export const NAV_LINKS = [
   { to: "/", label: "Home", icon: "🏠" },
   { to: "/matches", label: "Matches", icon: "⚽" },
   { to: "/standings", label: "Standings", icon: "📊" },
+  { to: "/analytics", label: "Analytics", icon: "📈" },
   { to: "/predictions", label: "Predictions", icon: "🔮" },
   { to: "/players", label: "Players", icon: "👟" },
   { to: "/teams", label: "Teams", icon: "🌍" },

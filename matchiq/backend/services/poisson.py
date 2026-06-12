@@ -9,6 +9,7 @@ results (0-0, 1-0, 0-1, 1-1), which plain Poisson systematically misprices.
 import bisect
 import math
 import random
+import time
 from itertools import accumulate
 from typing import Dict, List, Tuple
 
@@ -20,6 +21,37 @@ RATING_SCALE = 10.0
 DC_RHO = -0.13
 HOST_CODES = {"USA", "MEX", "CAN"}
 HOST_BOOST = 1.12
+
+# Live-form blending: the rating is the pre-tournament prior; as real matches
+# are played, each team's observed scoring rates pull expected goals toward
+# tournament form. Weight = played / (played + K): one game moves predictions
+# ~17%, a full group stage ~43% — the prior never vanishes entirely.
+_FORM_K = 5.0
+_FORM_TTL = 300
+_form_cache = {"at": 0.0, "attack": {}, "concede": {}}
+
+
+def _form_factors() -> Tuple[Dict[int, float], Dict[int, float]]:
+    now = time.time()
+    if now - _form_cache["at"] < _FORM_TTL:
+        return _form_cache["attack"], _form_cache["concede"]
+    attack, concede = {}, {}
+    try:
+        for grp in football_api.api.standings():
+            for row in grp["rows"]:
+                played = row["played"]
+                if not played:
+                    continue
+                w = played / (played + _FORM_K)
+                a = (1 - w) + w * (row["goals_for"] / played / BASE_GOALS)
+                c = (1 - w) + w * (row["goals_against"] / played / BASE_GOALS)
+                tid = row["team"]["id"]
+                attack[tid] = min(max(a, 0.6), 1.6)
+                concede[tid] = min(max(c, 0.6), 1.6)
+    except Exception:
+        pass  # form is an enhancement — never let it break a prediction
+    _form_cache.update(at=now, attack=attack, concede=concede)
+    return attack, concede
 
 
 def _poisson_pmf(k: int, lam: float) -> float:
@@ -46,6 +78,9 @@ def expected_goals(home: dict, away: dict) -> Tuple[float, float]:
         lam *= HOST_BOOST
     if away["code"] in HOST_CODES:
         mu *= HOST_BOOST
+    attack, concede = _form_factors()
+    lam *= attack.get(home["id"], 1.0) * concede.get(away["id"], 1.0)
+    mu *= attack.get(away["id"], 1.0) * concede.get(home["id"], 1.0)
     return min(max(lam, 0.15), 4.5), min(max(mu, 0.15), 4.5)
 
 

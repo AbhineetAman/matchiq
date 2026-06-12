@@ -1,0 +1,28 @@
+name: Deploy backend to Render
+
+# Belt-and-braces deploy trigger: if Render's own GitHub integration misses
+# a push, this hits the service's deploy hook so the backend always ships.
+# Requires the RENDER_DEPLOY_HOOK repository secret (Render dashboard →
+# matchiq-api → Settings → Deploy Hook).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "matchiq/backend/**"
+      - "render.yaml"
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK secret not set — skipping (Render's own integration must handle it)"
+            exit 0
+          fi
+          curl -sS -m 30 "$HOOK"

@@ -18,6 +18,7 @@ from typing import Dict, List, Optional
 import httpx
 
 from .cache import cache
+from .venues import venue_for
 
 log = logging.getLogger("matchiq.football_data")
 
@@ -214,6 +215,9 @@ class FootballData:
             score = fx.get("score", {}).get("fullTime", {})
             home = index.get((fx.get("homeTeam") or {}).get("id"))
             away = index.get((fx.get("awayTeam") or {}).get("id"))
+            venue, city = venue_for(
+                (home or {}).get("code"), (away or {}).get("code"), kickoff.isoformat()
+            )
             out.append(
                 {
                     "id": fx["id"],
@@ -221,8 +225,8 @@ class FootballData:
                     "group": group,
                     "kickoff_utc": kickoff.isoformat(),
                     "kickoff_ist": ist_fmt(kickoff),
-                    "venue": fx.get("venue") or "TBC",
-                    "city": fx.get("area", {}).get("name") or "TBC",
+                    "venue": fx.get("venue") or venue,
+                    "city": city or "TBC",
                     "status": status,
                     "minute": minute,
                     "home": home,

@@ -86,6 +86,34 @@ class TeamSquad(BaseModel):
     players: List[Player]
 
 
+class NewsItem(BaseModel):
+    title: str
+    url: str
+    source: str
+    published: Optional[str] = None
+
+
+class DiscussionItem(BaseModel):
+    title: str
+    url: str
+    score: int
+    comments: int
+    subreddit: str
+    published: Optional[str] = None
+
+
+class TrendingTopic(BaseModel):
+    topic: str
+    count: int
+
+
+class NewsFeed(BaseModel):
+    updated_at: str
+    news: List[NewsItem]
+    discussions: List[DiscussionItem]
+    topics: List[TrendingTopic]
+
+
 class ScorelineProb(BaseModel):
     home_goals: int
     away_goals: int

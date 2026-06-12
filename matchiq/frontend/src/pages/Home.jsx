@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import LiveScoreCard from "../components/dashboard/LiveScoreCard";
 import MatchCountdown from "../components/dashboard/MatchCountdown";
 import TodayMatches from "../components/dashboard/TodayMatches";
+import TournamentBuzz from "../components/dashboard/TournamentBuzz";
 import GroupStandingsTable from "../components/dashboard/GroupStandingsTable";
 import LoadingSkeleton from "../components/common/LoadingSkeleton";
 import PlayerAvatar from "../components/common/PlayerAvatar";
@@ -102,6 +103,11 @@ export default function Home() {
           )}
         </section>
       </div>
+
+      <section>
+        <SectionTitle>📡 Tournament buzz</SectionTitle>
+        <TournamentBuzz />
+      </section>
 
       <section>
         <SectionTitle to="/standings">📊 Group standings snapshot</SectionTitle>

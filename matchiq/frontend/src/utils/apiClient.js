@@ -22,6 +22,7 @@ export const fetchPrediction = (home, away) =>
   api.get(`/api/predictions/${encodeURIComponent(home)}/${encodeURIComponent(away)}`).then((r) => r.data);
 export const fetchSimulation = (runs = 1000) =>
   api.get("/api/simulate", { params: { runs } }).then((r) => r.data);
+export const fetchNews = () => api.get("/api/news").then((r) => r.data);
 export const exportUrl = (file) => `${API_URL}/api/export/${file}`;
 
 export default api;

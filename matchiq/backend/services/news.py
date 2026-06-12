@@ -95,6 +95,39 @@ def _reddit_hot() -> List[dict]:
     return picked
 
 
+MASTODON_TAG = "https://mastodon.social/api/v1/timelines/tag/worldcup?limit=30"
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _mastodon() -> List[dict]:
+    """Fallback discussion source — Mastodon's public hashtag timeline is
+    reachable from datacenter IPs (Reddit blocks them)."""
+    resp = httpx.get(MASTODON_TAG, headers=UA, timeout=12, follow_redirects=True)
+    resp.raise_for_status()
+    posts = []
+    seen_accounts = set()
+    for p in resp.json():
+        text = _TAG_RE.sub("", p.get("content") or "").strip()
+        account = (p.get("account") or {}).get("acct") or ""
+        if len(text) < 40 or account in seen_accounts:
+            continue
+        if not _WC_PATTERN.search(text):
+            continue
+        seen_accounts.add(account)
+        posts.append(
+            {
+                "title": text[:180],
+                "url": p.get("url") or "",
+                "score": (p.get("reblogs_count") or 0) + (p.get("favourites_count") or 0),
+                "comments": p.get("replies_count") or 0,
+                "subreddit": "Mastodon #worldcup",
+                "published": p.get("created_at"),
+            }
+        )
+    posts.sort(key=lambda x: (x["score"], x["published"] or ""), reverse=True)
+    return posts[:10]
+
+
 def _trending_topics(titles: List[str]) -> List[dict]:
     """Counts team & star-player mentions across all headlines — the panel's
     'what is everyone talking about' chips, recomputed every refresh."""
@@ -139,6 +172,11 @@ def get_feed() -> dict:
         discussions = _reddit_hot()
     except Exception as exc:
         log.warning("reddit fetch failed: %s", exc)
+    if not discussions:
+        try:
+            discussions = _mastodon()
+        except Exception as exc:
+            log.warning("mastodon fetch failed: %s", exc)
     feed = {
         "updated_at": _iso(datetime.now(timezone.utc)),
         "news": news,

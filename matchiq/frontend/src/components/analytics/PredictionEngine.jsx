@@ -1,7 +1,30 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useMatchPrediction } from "../../hooks/useMatchPrediction";
 import LoadingSkeleton from "../common/LoadingSkeleton";
 import { ErrorState } from "../common/ErrorBoundary";
+
+/* Skeleton plus a progress message when the request runs long (the free-tier
+   backend can need ~30-40s to wake from sleep — without feedback it reads
+   as a frozen screen). */
+function PredictionLoading() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="space-y-3">
+      <LoadingSkeleton variant="table" count={4} />
+      {slow && (
+        <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+          <span className="inline-block h-2 w-2 animate-ping rounded-full bg-gold" />
+          Crunching the numbers — waking the prediction server, this first run can take up to 30 seconds…
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ProbBar({ label, value, tone }) {
   return (
@@ -38,7 +61,7 @@ export default function PredictionEngine({ home, away }) {
       </div>
     );
   }
-  if (isLoading) return <LoadingSkeleton variant="table" count={4} />;
+  if (isLoading) return <PredictionLoading />;
   if (isError) return <ErrorState message="Could not compute the prediction." onRetry={refetch} />;
 
   return (

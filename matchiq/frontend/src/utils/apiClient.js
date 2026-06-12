@@ -2,7 +2,13 @@ import axios from "axios";
 
 export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-const api = axios.create({ baseURL: API_URL, timeout: 20000 });
+// Generous timeout: the free-tier backend can take ~40s to wake from sleep,
+// and a slow success beats a fast timeout error.
+const api = axios.create({ baseURL: API_URL, timeout: 65000 });
+
+// Fire-and-forget wake-up call as soon as the app loads, so the backend is
+// already warming while the user is still looking at the first page.
+api.get("/health").catch(() => {});
 
 export const fetchLive = () => api.get("/api/matches/live").then((r) => r.data);
 export const fetchToday = () => api.get("/api/matches/today").then((r) => r.data);

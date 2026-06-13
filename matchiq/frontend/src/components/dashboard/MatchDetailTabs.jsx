@@ -41,6 +41,45 @@ function TimelineRow({ event }) {
   );
 }
 
+/* When the free feed has no minute-by-minute events, the timeline still shows
+   the real score progression — kick-off, half-time and the live/full-time
+   score — derived entirely from data we already have. */
+function ScoreProgression({ match, stats }) {
+  const ht = stats.find((s) => s.label === "Half-time");
+  const scored = match.home_score !== null && match.home_score !== undefined;
+  const milestones = [{ label: "Kick-off", home: "0", away: "0" }];
+  if (ht) milestones.push({ label: "Half-time", home: ht.home, away: ht.away });
+  if (scored) {
+    const live = match.status === "LIVE" || match.status === "HT";
+    milestones.push({
+      label: live ? `Live${match.minute ? ` ${match.minute}'` : ""}` : "Full-time",
+      home: String(match.home_score),
+      away: String(match.away_score),
+    });
+  }
+  return (
+    <div>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 pb-1 pt-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+        <span className="justify-self-start text-xl leading-none">{match.home?.flag}</span>
+        <span>Score progression</span>
+        <span className="justify-self-end text-xl leading-none">{match.away?.flag}</span>
+      </div>
+      <div className="divide-y divide-navy-700/40 pb-1">
+        {milestones.map((m) => (
+          <div key={m.label} className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 py-2 text-sm">
+            <span className="stat justify-self-start text-lg font-bold text-slate-200">{m.home}</span>
+            <span className="text-center text-xs text-slate-400">{m.label}</span>
+            <span className="stat justify-self-end text-lg font-bold text-slate-200">{m.away}</span>
+          </div>
+        ))}
+      </div>
+      <div className="px-4 pb-2.5 pt-1 text-[10px] uppercase tracking-wider text-slate-600">
+        Goal scorers and minutes need a live data feed
+      </div>
+    </div>
+  );
+}
+
 function LineupColumn({ team, lineup }) {
   if (!lineup) {
     return <div className="p-4 text-center text-sm text-slate-500">Lineup not available yet.</div>;
@@ -52,7 +91,7 @@ function LineupColumn({ team, lineup }) {
         <span className="truncate">{team?.name}</span>
       </div>
       <div className="mb-3 text-xs text-slate-500">
-        {lineup.is_full_xi ? `Starting XI${lineup.formation ? ` · ${lineup.formation}` : ""}` : "Key players"}
+        {lineup.is_full_xi ? `Starting XI${lineup.formation ? ` · ${lineup.formation}` : ""}` : "Squad"}
         {lineup.coach ? ` · Coach: ${lineup.coach}` : ""}
       </div>
       <ul className="space-y-1.5 text-sm">
@@ -146,7 +185,7 @@ export default function MatchDetailTabs({ match }) {
             ))}
           </div>
         ) : (
-          <div className="p-5 text-center text-sm text-slate-500">No key events recorded yet.</div>
+          <ScoreProgression match={match} stats={data.stats} />
         ))}
 
       {tab === "lineups" && (

@@ -20,6 +20,7 @@ import random
 from .football_api import (
     SEASON,
     WORLD_CUP_LEAGUE_ID,
+    _base_teams,
     _fallback_matches,
     _fallback_players,
     _load_fallback,
@@ -208,6 +209,39 @@ def _fd_lineup(side: dict) -> Optional[dict]:
             "is_full_xi": True}
 
 
+def _squad_lineups() -> Dict[int, dict]:
+    """{fd_team_id: squad-as-lineup} from the free official-squad feed.
+
+    The free tier never sends a confirmed starting XI, but it does carry each
+    team's real squad + coach — so we show that (flagged is_full_xi=False) so
+    the Lineups tab has genuine data instead of being empty.
+    """
+    try:
+        base = _base_teams()
+        index = fd._team_index(base)              # {fd_id: local team}
+        squads = fd.squads(base)                  # {local_id: {coach, players}}
+        if not index or not squads:
+            return {}
+    except Exception:
+        return {}
+    out: Dict[int, dict] = {}
+    for fd_id, local in index.items():
+        sq = squads.get(local["id"])
+        if not sq or not sq.get("players"):
+            continue
+        ordered = sorted(sq["players"], key=lambda p: _POSITION_ORDER.get(p.get("position"), 9))
+        coach = sq.get("coach") or {}
+        out[fd_id] = {
+            "formation": None,
+            "coach": coach.get("name"),
+            "starting": [{"name": p.get("name") or "Unknown", "position": p.get("position"), "shirt": None}
+                         for p in ordered],
+            "bench": [],
+            "is_full_xi": False,
+        }
+    return out
+
+
 def _live_details(match_id: int) -> Optional[dict]:
     data = fd.match_detail(match_id)
     if not data or not data.get("id"):
@@ -256,20 +290,34 @@ def _live_details(match_id: int) -> Optional[dict]:
     half_time = score.get("halfTime") or {}
     stats = []
     if full_time.get("home") is not None:
-        stats.append({"label": "Goals", "home": str(full_time["home"]), "away": str(full_time.get("away", 0))})
-    if half_time.get("home") is not None:
-        stats.append({"label": "Half-time", "home": str(half_time["home"]), "away": str(half_time.get("away", 0))})
+        fh, fa = full_time["home"], full_time.get("away", 0)
+        stats.append({"label": "Goals", "home": str(fh), "away": str(fa)})
+        if half_time.get("home") is not None:
+            hh, ha = half_time["home"], half_time.get("away", 0)
+            stats.append({"label": "Half-time", "home": str(hh), "away": str(ha)})
+            stats.append({"label": "1st-half goals", "home": str(hh), "away": str(ha)})
+            stats.append({"label": "2nd-half goals", "home": str(fh - hh), "away": str(fa - ha)})
     if data.get("bookings") is not None:
         stats.append({"label": "Yellow cards", "home": str(cards["home"]["yellow"]), "away": str(cards["away"]["yellow"])})
         stats.append({"label": "Red cards", "home": str(cards["home"]["red"]), "away": str(cards["away"]["red"])})
 
+    # the free match resource never carries lineups — fall back to the real
+    # official squad feed so the Lineups tab shows genuine data
+    home_lineup = _fd_lineup(data.get("homeTeam") or {})
+    away_lineup = _fd_lineup(data.get("awayTeam") or {})
+    if not home_lineup or not away_lineup:
+        squad_lineups = _squad_lineups()
+        home_lineup = home_lineup or squad_lineups.get((data.get("homeTeam") or {}).get("id"))
+        away_lineup = away_lineup or squad_lineups.get((data.get("awayTeam") or {}).get("id"))
+
     note = None
-    if not events and not (data.get("bookings") or data.get("goals")):
-        note = "The free live feed provides scores only — detailed stats appear automatically when available."
+    if not events:
+        note = ("Lineups show each team's official squad. Minute-by-minute events "
+                "and possession stats need a live data feed.")
     return {"match_id": match_id, "available": True, "source": "live",
             "timeline": events,
-            "home_lineup": _fd_lineup(data.get("homeTeam") or {}),
-            "away_lineup": _fd_lineup(data.get("awayTeam") or {}),
+            "home_lineup": home_lineup,
+            "away_lineup": away_lineup,
             "stats": stats, "referee": referee, "note": note}
 
 

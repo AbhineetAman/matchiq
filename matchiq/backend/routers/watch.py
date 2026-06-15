@@ -70,7 +70,7 @@ def _target(match_id: int, country: str = None) -> str:
 
 @router.get("/go/live/{match_id}")
 def watch_live(match_id: int, request: Request):
-    \"\"\"302 to the official broadcaster based on geography (affiliate-wrapped when configured).\"\"\"
+    """302 to the official broadcaster based on geography (affiliate-wrapped when configured)."""
     if not any(m["id"] == match_id for m in api.matches()):
         raise HTTPException(status_code=404, detail="Unknown match")
     

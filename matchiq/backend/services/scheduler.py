@@ -57,7 +57,7 @@ def start():
     if not (has_fd or has_rapid):
         log.info("no live-data credential set — scheduler idle, serving fallback data")
         return
-    scheduler.add_job(_refresh_live, "interval", minutes=2, id="live")
+    scheduler.add_job(_refresh_live, "interval", minutes=1, id="live")
     scheduler.add_job(_refresh_slow, "interval", minutes=15, id="slow")
     scheduler.add_job(_refresh_squads, "interval", hours=12, id="squads",
                       next_run_time=datetime.now())

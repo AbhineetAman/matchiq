@@ -5,8 +5,8 @@ export function useLiveScores() {
   return useQuery({
     queryKey: ["live-scores"],
     queryFn: fetchLive,
-    refetchInterval: 30_000,
-    staleTime: 20_000,
+    refetchInterval: 15_000,
+    staleTime: 10_000,
   });
 }
 
@@ -14,7 +14,7 @@ export function useTodayMatches() {
   return useQuery({
     queryKey: ["today-matches"],
     queryFn: fetchToday,
-    refetchInterval: 60_000,
-    staleTime: 45_000,
+    refetchInterval: 30_000,
+    staleTime: 20_000,
   });
 }

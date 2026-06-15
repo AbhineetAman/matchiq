@@ -88,7 +88,7 @@ def _derive_state(kickoff: datetime, now: datetime, goals_home: List[int], goals
     elif elapsed < 60:  # half-time interval
         status_minute = 45
         return "HT", status_minute, _score_at(goals_home, 45), _score_at(goals_away, 45)
-    elif elapsed < 110:
+    elif elapsed < 105:
         minute = min(90, int(elapsed) - 15)
     else:
         return "FT", 90, len(goals_home), len(goals_away)

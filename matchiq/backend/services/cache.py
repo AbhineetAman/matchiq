@@ -12,7 +12,7 @@ import threading
 import time
 from typing import Any, Optional
 
-LIVE_TTL = 5 * 60
+LIVE_TTL = 1 * 60
 SLOW_TTL = 30 * 60
 
 _DB_PATH = os.environ.get("CACHE_DB_PATH", os.path.join(os.path.dirname(__file__), "..", "matchiq_cache.db"))

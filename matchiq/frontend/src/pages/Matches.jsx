@@ -112,8 +112,8 @@ export default function Matches() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["all-matches"],
     queryFn: () => fetchMatches(),
-    staleTime: 5 * 60_000,
-    refetchInterval: 60_000,
+    staleTime: 2 * 60_000,
+    refetchInterval: 30_000,
   });
 
   const filtered = useMemo(() => {

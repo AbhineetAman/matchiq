@@ -148,8 +148,8 @@ export default function MatchDetailTabs({ match }) {
   const { data, isLoading } = useQuery({
     queryKey: ["match-details", match.id],
     queryFn: () => fetchMatchDetails(match.id),
-    staleTime: live ? 60_000 : 15 * 60_000,
-    refetchInterval: live ? 60_000 : false,
+    staleTime: live ? 30_000 : 15 * 60_000,
+    refetchInterval: live ? 30_000 : false,
   });
 
   if (isLoading) return <LoadingSkeleton variant="table" count={4} />;

@@ -45,11 +45,49 @@ def _form_factors() -> Tuple[Dict[int, float], Dict[int, float]]:
                 w = played / (played + _FORM_K)
                 a = (1 - w) + w * (row["goals_for"] / played / BASE_GOALS)
                 c = (1 - w) + w * (row["goals_against"] / played / BASE_GOALS)
+                
+                # Dynamic momentum from current team form
+                form_array = row.get("form", [])
+                momentum = 0.0
+                if form_array:
+                    for res in form_array[-3:]:
+                        if res == "W": momentum += 0.05
+                        elif res == "L": momentum -= 0.05
+                        
                 tid = row["team"]["id"]
-                attack[tid] = min(max(a, 0.6), 1.6)
-                concede[tid] = min(max(c, 0.6), 1.6)
+                attack[tid] = min(max(a + momentum, 0.6), 1.8)
+                concede[tid] = min(max(c - momentum, 0.6), 1.8)
     except Exception:
         pass  # form is an enhancement — never let it break a prediction
+        
+    try:
+        # Dynamic player form
+        player_bonus = {}
+        defense_penalty = {}
+        for p in football_api.api.players():
+            tid = p.get("team_id")
+            if not tid:
+                continue
+            goals = p.get("goals", 0)
+            assists = p.get("assists", 0)
+            red_cards = p.get("red_cards", 0)
+            yellow_cards = p.get("yellow_cards", 0)
+            
+            if goals > 0 or assists > 0:
+                player_bonus[tid] = player_bonus.get(tid, 0.0) + (goals * 0.03) + (assists * 0.01)
+            if red_cards > 0 or yellow_cards > 0:
+                defense_penalty[tid] = defense_penalty.get(tid, 0.0) + (red_cards * 0.05) + (yellow_cards * 0.01)
+
+        for tid, bonus in player_bonus.items():
+            if tid in attack:
+                attack[tid] = min(attack[tid] + bonus, 2.0)
+                
+        for tid, penalty in defense_penalty.items():
+            if tid in concede:
+                concede[tid] = min(concede[tid] + penalty, 2.0)
+    except Exception:
+        pass
+
     _form_cache.update(at=now, attack=attack, concede=concede)
     return attack, concede
 

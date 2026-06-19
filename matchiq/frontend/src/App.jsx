@@ -46,6 +46,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/matches" element={<Matches />} />
+            <Route path="/matches/:matchId" element={<Matches />} />
             <Route path="/standings" element={<Standings />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/predictions" element={<Predictions />} />

@@ -21,7 +21,7 @@ import { exportUrl, fetchPlayers } from "../utils/apiClient";
 
 const POSITIONS = ["GK", "DF", "MF", "FW"];
 
-function radarData(a, b) {
+function radarData(player) {
   const metrics = [
     ["Goals", (p) => p.goals, 8],
     ["Assists", (p) => p.assists, 6],
@@ -31,12 +31,11 @@ function radarData(a, b) {
     ["Minutes", (p) => p.minutes, 320],
     ["Age", (p) => p.age, 40],
   ];
-  // live-mode players carry no advanced metrics — only chart what both have
-  const usable = metrics.filter(([, fn]) => fn(a) != null && (!b || fn(b) != null));
+  // live-mode players carry no advanced metrics
+  const usable = metrics.filter(([, fn]) => fn(player) != null);
   return usable.map(([label, fn, max]) => ({
     metric: label,
-    [a.name]: Math.round(((fn(a) ?? 0) / max) * 100),
-    ...(b ? { [b.name]: Math.round(((fn(b) ?? 0) / max) * 100) } : {}),
+    [player.name]: Math.round(((fn(player) ?? 0) / max) * 100),
   }));
 }
 
@@ -90,7 +89,7 @@ export default function Players() {
   const [search, setSearch] = useState("");
   const [team, setTeam] = useState(params.get("team") || "");
   const [position, setPosition] = useState("");
-  const [compare, setCompare] = useState([]);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   const teams = useTeams();
   const players = useQuery({
@@ -105,21 +104,12 @@ export default function Players() {
     return players.data.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
   }, [players.data, search]);
 
-  const toggleCompare = (player) => {
-    setCompare((prev) => {
-      if (prev.find((p) => p.id === player.id)) return prev.filter((p) => p.id !== player.id);
-      return [...prev.slice(-1), player];
-    });
-  };
-
-  const [a, b] = compare;
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-white">Players</h1>
-          <p className="mt-1 text-sm text-slate-400">Tap two players to compare them side by side.</p>
+          <p className="mt-1 text-sm text-slate-400">Tap a player to view their profile and stats.</p>
         </div>
         <a href={exportUrl("players.csv")} className="btn-ghost text-sm">⬇ Download CSV</a>
       </div>
@@ -145,28 +135,62 @@ export default function Players() {
         </select>
       </div>
 
-      {a && (
+      {selectedPlayer && (
         <section className="card space-y-4 p-5">
           <div className="flex items-center justify-between">
-            <h2 className="font-bold text-white">
-              ⚔️ Comparison: {a.name} {b ? `vs ${b.name}` : "(select one more player)"}
-            </h2>
-            <button onClick={() => setCompare([])} className="text-sm text-slate-400 hover:text-danger">Clear</button>
+            <div className="flex items-center gap-3">
+              <PlayerAvatar player={selectedPlayer} size="lg" />
+              <div>
+                <h2 className="text-xl font-bold text-white">{selectedPlayer.name}</h2>
+                <div className="text-sm text-slate-400">
+                  {selectedPlayer.team_flag} {selectedPlayer.team_name} · {selectedPlayer.nationality || selectedPlayer.team_name} · {selectedPlayer.position} {selectedPlayer.age ? `· ${selectedPlayer.age}y` : ""}
+                </div>
+              </div>
+            </div>
+            <button onClick={() => setSelectedPlayer(null)} className="text-sm text-slate-400 hover:text-danger">Close</button>
           </div>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <ResponsiveContainer width="100%" height={300}>
-              <RadarChart data={radarData(a, b)}>
-                <PolarGrid stroke="#27314A" />
-                <PolarAngleAxis dataKey="metric" tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-                <Radar name={a.name} dataKey={a.name} stroke="#FFD700" fill="#FFD700" fillOpacity={0.25} />
-                {b && <Radar name={b.name} dataKey={b.name} stroke="#00FF87" fill="#00FF87" fillOpacity={0.25} />}
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-              </RadarChart>
-            </ResponsiveContainer>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <PlayerHeatmap player={a} />
-              {b && <PlayerHeatmap player={b} />}
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-slate-200">Player Stats</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="card bg-navy-800 p-3">
+                  <div className="text-xs text-slate-500">Rating</div>
+                  <div className="text-lg font-bold text-gold">{selectedPlayer.rating ?? "–"}</div>
+                </div>
+                <div className="card bg-navy-800 p-3">
+                  <div className="text-xs text-slate-500">Goals</div>
+                  <div className="text-lg font-bold text-white">{selectedPlayer.goals ?? "0"}</div>
+                </div>
+                <div className="card bg-navy-800 p-3">
+                  <div className="text-xs text-slate-500">Assists</div>
+                  <div className="text-lg font-bold text-white">{selectedPlayer.assists ?? "0"}</div>
+                </div>
+                <div className="card bg-navy-800 p-3">
+                  <div className="text-xs text-slate-500">xG</div>
+                  <div className="text-lg font-bold text-white">{selectedPlayer.xg ?? "–"}</div>
+                </div>
+                <div className="card bg-navy-800 p-3">
+                  <div className="text-xs text-slate-500">Pass Accuracy</div>
+                  <div className="text-lg font-bold text-white">{selectedPlayer.pass_accuracy ? `${selectedPlayer.pass_accuracy}%` : "–"}</div>
+                </div>
+                <div className="card bg-navy-800 p-3">
+                  <div className="text-xs text-slate-500">Minutes</div>
+                  <div className="text-lg font-bold text-white">{selectedPlayer.minutes ?? "0"}</div>
+                </div>
+              </div>
+            </div>
+            <div className="h-64 lg:h-auto">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={radarData(selectedPlayer)}>
+                  <PolarGrid stroke="#27314A" />
+                  <PolarAngleAxis dataKey="metric" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                  <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+                  <Radar name={selectedPlayer.name} dataKey={selectedPlayer.name} stroke="#FFD700" fill="#FFD700" fillOpacity={0.25} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+            <div>
+              <PlayerHeatmap player={selectedPlayer} />
             </div>
           </div>
         </section>
@@ -183,8 +207,8 @@ export default function Players() {
               key={p.id}
               player={p}
               index={i}
-              selected={Boolean(compare.find((c) => c.id === p.id))}
-              onToggle={() => toggleCompare(p)}
+              selected={selectedPlayer?.id === p.id}
+              onToggle={() => setSelectedPlayer(selectedPlayer?.id === p.id ? null : p)}
             />
           ))}
         </div>

@@ -20,7 +20,7 @@ function TeamSlot({ team, picked, eliminated, pct, onPick }) {
       }`}
     >
       <span className="truncate">
-        {team.flag} {team.code}
+        {team.flag} {team.code || team.name.substring(0,3).toUpperCase()}
       </span>
       {pct !== undefined && <span className="stat shrink-0 text-[10px] text-slate-500">{pct}%</span>}
     </button>
@@ -28,64 +28,90 @@ function TeamSlot({ team, picked, eliminated, pct, onPick }) {
 }
 
 export default function TournamentBracket({ teams }) {
+  const [groupWinners, setGroupWinners] = useState({});
+  const [thirdPlaces, setThirdPlaces] = useState([]);
   const [picks, setPicks] = useState({});
-  const [params] = useSearchParams();
-  const loadedFromUrl = useRef(false);
 
-  const seeds = useMemo(() => {
-    const sorted = [...teams].sort((a, b) => b.rating - a.rating).slice(0, 32);
-    const pairs = [];
-    for (let i = 0; i < 16; i++) pairs.push([sorted[i], sorted[31 - i]]);
-    return pairs;
+  const groups = useMemo(() => {
+    if (!teams) return {};
+    const g = {};
+    teams.forEach(t => {
+      const grp = t.group || "A";
+      if (!g[grp]) g[grp] = [];
+      g[grp].push(t);
+    });
+    // Ensure all 12 groups A-L exist
+    "ABCDEFGHIJKL".split("").forEach(l => { if (!g[l]) g[l] = []; });
+    return g;
   }, [teams]);
 
-  // A shared link carries all 31 picks as ?b=<base36 code>: each slot is a
-  // base-3 digit (0 = no pick, 1 = top feeder, 2 = bottom feeder). The legacy
-  // dotted-id format is still accepted. Every pick is validated against the
-  // teams actually feeding that slot, so tampered links degrade safely.
-  useEffect(() => {
-    const encoded = params.get("b");
-    if (!encoded || !seeds.length || loadedFromUrl.current) return;
-    loadedFromUrl.current = true;
+  const toggleTeam = (team) => {
+    const g = team.group || "A";
+    const gw = groupWinners[g] || [];
+    const isFirst = gw[0] && gw[0].id === team.id;
+    const isSecond = gw[1] && gw[1].id === team.id;
+    const isThird = thirdPlaces.some(t => t.id === team.id);
 
-    let digitFor;
-    if (encoded.includes(".")) {
-      const ids = encoded.split(".").map((s) => (s ? Number(s) : null));
-      digitFor = (idx, a, b) => (a && a.id === ids[idx] ? 1 : b && b.id === ids[idx] ? 2 : 0);
+    if (isFirst) {
+      // Removing 1st place shifts 2nd to 1st
+      setGroupWinners(prev => ({ ...prev, [g]: gw.slice(1) }));
+      setPicks({});
+    } else if (isSecond) {
+      setGroupWinners(prev => ({ ...prev, [g]: [gw[0]] }));
+      setPicks({});
+    } else if (isThird) {
+      setThirdPlaces(prev => prev.filter(t => t.id !== team.id));
+      setPicks({});
     } else {
-      let v = 0n;
-      for (const c of encoded.toLowerCase()) {
-        const d = parseInt(c, 36);
-        if (Number.isNaN(d)) return;
-        v = v * 36n + BigInt(d);
+      if (gw.length < 2) {
+        setGroupWinners(prev => ({ ...prev, [g]: [...gw, team] }));
+      } else if (thirdPlaces.length < 8) {
+        setThirdPlaces(prev => [...prev, team]);
+      } else {
+        alert("You have already selected 8 third-place teams!");
       }
-      const digits = Array(31).fill(0);
-      for (let i = 30; i >= 0; i--) {
-        digits[i] = Number(v % 3n);
-        v /= 3n;
-      }
-      digitFor = (idx) => digits[idx];
     }
+  };
 
-    const next = {};
-    let current = seeds;
-    let idx = 0;
-    for (let r = 0; r < 5; r++) {
-      const upcoming = [];
-      current.forEach(([a, b], m) => {
-        const d = digitFor(idx++, a, b);
-        const winner = d === 1 ? a : d === 2 ? b : null;
-        if (winner) next[`${r}-${m}`] = winner;
-        if (m % 2 === 0) upcoming.push([winner, null]);
-        else upcoming[upcoming.length - 1][1] = winner;
-      });
-      current = upcoming;
-    }
-    setPicks(next);
-  }, [params, seeds]);
+  const seeds = useMemo(() => {
+    let allCount = 0;
+    Object.values(groupWinners).forEach(arr => { allCount += arr.length; });
+    allCount += thirdPlaces.length;
+    
+    if (allCount !== 32) return [];
 
-  // Round r match m is fed by round r-1 matches 2m and 2m+1.
+    const getTeam = (group, rank) => {
+      const g = groupWinners[group] || [];
+      return g[rank - 1] || null;
+    };
+
+    const t3 = [...thirdPlaces]; // pool of 8 third-place teams
+    const pop3 = () => t3.pop() || null;
+
+    const pairs = [
+      [getTeam("E", 1), pop3()],         // 1E vs 3rd
+      [getTeam("I", 1), pop3()],         // 1I vs 3rd
+      [getTeam("A", 2), getTeam("B", 2)], // 2A vs 2B
+      [getTeam("F", 1), getTeam("C", 2)], // 1F vs 2C
+      [getTeam("K", 2), getTeam("L", 2)], // 2K vs 2L
+      [getTeam("H", 1), getTeam("J", 2)], // 1H vs 2J
+      [getTeam("D", 1), pop3()],         // 1D vs 3rd
+      [getTeam("G", 1), pop3()],         // 1G vs 3rd
+      [getTeam("C", 1), getTeam("F", 2)], // 1C vs 2F
+      [getTeam("E", 2), getTeam("I", 2)], // 2E vs 2I
+      [getTeam("A", 1), pop3()],         // 1A vs 3rd
+      [getTeam("L", 1), pop3()],         // 1L vs 3rd
+      [getTeam("J", 1), getTeam("H", 2)], // 1J vs 2H
+      [getTeam("D", 2), getTeam("G", 2)], // 2D vs 2G
+      [getTeam("B", 1), pop3()],         // 1B vs 3rd
+      [getTeam("K", 1), pop3()]          // 1K vs 3rd
+    ];
+
+    return pairs;
+  }, [groupWinners, thirdPlaces]);
+
   const rounds = useMemo(() => {
+    if (!seeds.length) return [];
     const all = [seeds];
     for (let r = 1; r < 5; r++) {
       const prev = all[r - 1];
@@ -117,7 +143,23 @@ export default function TournamentBracket({ teams }) {
     });
   };
 
-  const autoFill = () => {
+  const autoFillGroupStage = () => {
+    const gw = {};
+    const thirds = [];
+    let remaining = [];
+    Object.keys(groups).forEach(g => {
+      const sorted = [...groups[g]].sort((a,b) => b.rating - a.rating);
+      gw[g] = sorted.slice(0, 2);
+      if (sorted[2]) remaining.push(sorted[2]);
+    });
+    remaining.sort((a,b) => b.rating - a.rating);
+    setGroupWinners(gw);
+    setThirdPlaces(remaining.slice(0, 8));
+    setPicks({});
+  };
+
+  const autoFillKnockouts = () => {
+    if (seeds.length !== 16) return;
     const next = {};
     let current = seeds;
     for (let r = 0; r < 5; r++) {
@@ -139,101 +181,122 @@ export default function TournamentBracket({ teams }) {
     setPicks(next);
   };
 
-  const shareUrl = () => {
-    let v = 0n;
-    for (let r = 0; r < 5; r++) {
-      for (let m = 0; m < 16 >> r; m++) {
-        const [a, b] = rounds[r][m];
-        const winner = picks[`${r}-${m}`];
-        const digit = winner && a && winner.id === a.id ? 1n : winner && b && winner.id === b.id ? 2n : 0n;
-        v = v * 3n + digit;
-      }
-    }
-    return `${window.location.origin}/bracket?b=${v.toString(36)}`;
+  const resetAll = () => {
+    setGroupWinners({});
+    setThirdPlaces([]);
+    setPicks({});
   };
 
-  const copySummary = async () => {
-    const lines = ["🏆 My FIFA 2026 bracket (via MatchIQ)"];
-    if (champion) lines.push(`My champion: ${champion.flag} ${champion.name}`);
-    const url = shareUrl();
-    lines.push(`See my full bracket: ${url}`);
-    const payload = lines.join("\n");
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "My FIFA 2026 bracket", text: payload, url });
-        return;
-      } catch {
-        /* user dismissed the share sheet — fall through to clipboard */
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(payload);
-      alert("Bracket link copied — anyone who opens it sees your full bracket!");
-    } catch {
-      prompt("Copy your bracket link:", url);
-    }
-  };
+  if (!teams || teams.length === 0) return null;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-slate-400">
-          Tap a team to advance them. Changing an earlier pick cascades and resets later rounds ("what-if" mode).
-        </p>
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-navy-700 pb-4">
+        <div>
+          <h2 className="text-xl font-bold text-white mb-1">1. Group Stage Selection</h2>
+          <p className="text-sm text-slate-400">
+            Select the top 2 teams from each group, plus the 8 best 3rd-place teams (32 total).
+          </p>
+          <div className="mt-2 text-sm">
+            <span className="text-pitch mr-4">Top 2 selected: {Object.values(groupWinners).flat().length} / 24</span>
+            <span className="text-blue-400">3rd place selected: {thirdPlaces.length} / 8</span>
+          </div>
+        </div>
         <div className="flex gap-2">
-          <button onClick={autoFill} className="btn-ghost text-sm">
-            ⚡ Auto-fill (model picks)
-          </button>
-          <button onClick={() => setPicks({})} className="btn-ghost text-sm">
-            Reset
-          </button>
-          <button onClick={copySummary} className="btn-gold text-sm">
-            Share bracket
-          </button>
+          <button onClick={autoFillGroupStage} className="btn-ghost text-sm">⚡ Auto-pick Groups</button>
+          <button onClick={resetAll} className="btn-ghost text-sm">Reset</button>
         </div>
       </div>
 
-      {champion && (
-        <div className="card flex items-center justify-center gap-3 border-gold/40 bg-gold/5 p-4 text-lg font-bold text-gold">
-          🏆 Your champion: {champion.flag} {champion.name}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {Object.entries(groups).map(([g, tms]) => (
+          <div key={g} className="card p-3 space-y-2">
+            <h3 className="text-center font-bold text-gold text-sm border-b border-navy-700 pb-1">Group {g}</h3>
+            {tms.map(t => {
+              const gw = groupWinners[g] || [];
+              const isFirst = gw[0] && gw[0].id === t.id;
+              const isSecond = gw[1] && gw[1].id === t.id;
+              const isThird = thirdPlaces.some(x => x.id === t.id);
+              
+              const isSelected = isFirst || isSecond;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => toggleTeam(t)}
+                  className={`w-full text-left text-xs p-1.5 rounded flex justify-between items-center transition ${
+                    isSelected ? 'bg-pitch/20 text-pitch font-bold border border-pitch' : 
+                    isThird ? 'bg-blue-500/20 text-blue-400 font-bold border border-blue-500' : 
+                    'bg-navy-800 text-slate-300 hover:bg-navy-700 border border-transparent'
+                  }`}
+                >
+                  <span className="truncate">{t.flag} {t.name}</span>
+                  {isFirst && <span className="text-[9px] uppercase tracking-wider">1st</span>}
+                  {isSecond && <span className="text-[9px] uppercase tracking-wider">2nd</span>}
+                  {isThird && <span className="text-[9px] uppercase tracking-wider">3rd</span>}
+                </button>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+
+      {seeds.length === 16 && (
+        <div className="mt-12 space-y-4 pt-8 border-t border-navy-700">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-1">2. Knockout Bracket</h2>
+              <p className="text-sm text-slate-400">
+                Tap a team to advance them through the Round of 32 to the Final.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={autoFillKnockouts} className="btn-ghost text-sm">⚡ Auto-fill Knockouts</button>
+            </div>
+          </div>
+
+          {champion && (
+            <div className="card flex items-center justify-center gap-3 border-gold/40 bg-gold/5 p-4 text-lg font-bold text-gold">
+              🏆 Your champion: {champion.flag} {champion.name}
+            </div>
+          )}
+
+          <div className="overflow-x-auto pb-3">
+            <div className="flex min-w-[1000px] gap-4">
+              {rounds.map((matches, r) => (
+                <div key={r} className="flex flex-1 flex-col">
+                  <div className="mb-2 text-center text-xs font-bold uppercase tracking-wider text-slate-400">
+                    {ROUND_NAMES[r]}
+                  </div>
+                  <div className="flex flex-1 flex-col justify-around gap-2">
+                    {matches.map(([a, b], m) => {
+                      const winner = picks[`${r}-${m}`];
+                      const probs = a && b ? quickPredict(a, b) : null;
+                      return (
+                        <div key={m} className="card space-y-1 p-1.5 border border-navy-600/50 hover:border-navy-500 transition-colors">
+                          <TeamSlot
+                            team={a}
+                            picked={winner && a && winner.id === a.id}
+                            eliminated={winner && a && winner.id !== a.id}
+                            pct={probs ? Math.round(probs.homeWin * 100) : undefined}
+                            onPick={a ? () => pick(r, m, a) : undefined}
+                          />
+                          <TeamSlot
+                            team={b}
+                            picked={winner && b && winner.id === b.id}
+                            eliminated={winner && b && winner.id !== b.id}
+                            pct={probs ? Math.round(probs.awayWin * 100) : undefined}
+                            onPick={b ? () => pick(r, m, b) : undefined}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
-
-      <div className="overflow-x-auto pb-3">
-        <div className="flex min-w-[1100px] gap-4">
-          {rounds.map((matches, r) => (
-            <div key={r} className="flex flex-1 flex-col">
-              <div className="mb-2 text-center text-xs font-bold uppercase tracking-wider text-slate-400">
-                {ROUND_NAMES[r]}
-              </div>
-              <div className="flex flex-1 flex-col justify-around gap-2">
-                {matches.map(([a, b], m) => {
-                  const winner = picks[`${r}-${m}`];
-                  const probs = a && b ? quickPredict(a, b) : null;
-                  return (
-                    <div key={m} className="card space-y-1 p-1.5">
-                      <TeamSlot
-                        team={a}
-                        picked={winner && a && winner.id === a.id}
-                        eliminated={winner && a && winner.id !== a.id}
-                        pct={probs ? Math.round(probs.homeWin * 100) : undefined}
-                        onPick={a ? () => pick(r, m, a) : undefined}
-                      />
-                      <TeamSlot
-                        team={b}
-                        picked={winner && b && winner.id === b.id}
-                        eliminated={winner && b && winner.id !== b.id}
-                        pct={probs ? Math.round(probs.awayWin * 100) : undefined}
-                        onPick={b ? () => pick(r, m, b) : undefined}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

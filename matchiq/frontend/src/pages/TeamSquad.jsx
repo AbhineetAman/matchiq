@@ -76,7 +76,7 @@ export default function TeamSquad() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link to={`/players?team=${team.id}`} className="btn-ghost text-sm">⚔️ Compare players</Link>
+          <Link to={`/players?team=${team.id}`} className="btn-ghost text-sm">⚔️ View players</Link>
           <Link to="/teams" className="btn-ghost text-sm">← All teams</Link>
         </div>
       </div>

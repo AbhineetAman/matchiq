@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import LiveScoreCard from "../components/dashboard/LiveScoreCard";
@@ -106,15 +107,28 @@ function MatchModal({ match, onClose }) {
 }
 
 export default function Matches() {
+  const { matchId } = useParams();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState("all");
   const [group, setGroup] = useState("");
-  const [selected, setSelected] = useState(null);
+  const [localSelected, setLocalSelected] = useState(null);
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["all-matches"],
     queryFn: () => fetchMatches(),
     staleTime: 2 * 60_000,
     refetchInterval: 30_000,
   });
+
+  const selected = matchId && data ? (data.find(m => String(m.id) === matchId)) : localSelected;
+
+  const handleSelect = (m) => {
+    navigate(`/matches/${m.id}`);
+  };
+
+  const handleClose = () => {
+    setLocalSelected(null);
+    navigate("/matches");
+  };
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -179,14 +193,14 @@ export default function Matches() {
       ) : filtered.length ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((m, i) => (
-            <LiveScoreCard key={m.id} match={m} index={Math.min(i, 8)} onClick={() => setSelected(m)} />
+            <LiveScoreCard key={m.id} match={m} index={Math.min(i, 8)} onClick={() => handleSelect(m)} />
           ))}
         </div>
       ) : (
         <div className="card p-8 text-center text-slate-400">No matches for this filter.</div>
       )}
 
-      <AnimatePresence>{selected && <MatchModal match={selected} onClose={() => setSelected(null)} />}</AnimatePresence>
+      <AnimatePresence>{selected && <MatchModal match={selected} onClose={handleClose} />}</AnimatePresence>
     </div>
   );
 }

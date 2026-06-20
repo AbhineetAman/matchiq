@@ -100,17 +100,34 @@ def _score_at(goal_minutes: List[int], minute: int) -> int:
 
 
 def _fallback_matches(now: Optional[datetime] = None) -> List[dict]:
+    import random
     now = now or datetime.now(timezone.utc)
     teams = {t["id"]: t for t in _base_teams()}
+    players_by_team = {}
+    for p in _load_fallback()["players"]:
+        players_by_team.setdefault(p["team_id"], []).append(p["name"])
+        
     out = []
     for m in _load_fallback()["matches"]:
         kickoff = datetime.fromisoformat(m["kickoff_utc"])
         home = teams.get(m["home_id"]) if m["home_id"] else None
         away = teams.get(m["away_id"]) if m["away_id"] else None
+        
+        home_events, away_events = [], []
         if home and away:
             status, minute, hs, as_ = _derive_state(kickoff, now, m["goals_home"], m["goals_away"])
+            h_players = players_by_team.get(home["id"], ["Unknown"])
+            a_players = players_by_team.get(away["id"], ["Unknown"])
+            
+            for g in m["goals_home"]:
+                if minute is not None and g <= minute:
+                    home_events.append({"minute": g, "player": random.Random(m["id"] + g).choice(h_players)})
+            for g in m["goals_away"]:
+                if minute is not None and g <= minute:
+                    away_events.append({"minute": g, "player": random.Random(m["id"] + g).choice(a_players)})
         else:
             status, minute, hs, as_ = "TBD", None, None, None
+            
         out.append(
             {
                 "id": m["id"],
@@ -126,6 +143,8 @@ def _fallback_matches(now: Optional[datetime] = None) -> List[dict]:
                 "away": away,
                 "home_score": hs,
                 "away_score": as_,
+                "home_scorers": home_events,
+                "away_scorers": away_events,
             }
         )
     return out

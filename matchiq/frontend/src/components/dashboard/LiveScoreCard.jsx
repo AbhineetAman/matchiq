@@ -22,17 +22,24 @@ function StatusBadge({ match }) {
   );
 }
 
-function TeamRow({ team, score, winner }) {
+function TeamRow({ team, score, winner, scorers }) {
   return (
-    <div className="flex items-center justify-between gap-2">
-      <div className="flex min-w-0 items-center gap-2">
-        <span className="text-2xl leading-none">{team?.flag || "🏳️"}</span>
-        <span className={`truncate font-semibold ${winner ? "text-white" : "text-slate-300"}`}>
-          {team?.name || "TBD"}
-        </span>
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="text-2xl leading-none">{team?.flag || "🏳️"}</span>
+          <span className={`truncate font-semibold ${winner ? "text-white" : "text-slate-300"}`}>
+            {team?.name || "TBD"}
+          </span>
+        </div>
+        {score !== null && score !== undefined && (
+          <span className={`stat text-2xl font-bold ${winner ? "text-gold" : "text-slate-200"}`}>{score}</span>
+        )}
       </div>
-      {score !== null && score !== undefined && (
-        <span className={`stat text-2xl font-bold ${winner ? "text-gold" : "text-slate-200"}`}>{score}</span>
+      {scorers && scorers.length > 0 && (
+        <div className="text-[10px] text-slate-400 pl-8 truncate">
+          {scorers.map((g, i) => <span key={i}>{g.player} {g.minute}'{i < scorers.length - 1 ? ', ' : ''}</span>)}
+        </div>
       )}
     </div>
   );
@@ -59,8 +66,8 @@ export default function LiveScoreCard({ match, onClick, index = 0 }) {
         <StatusBadge match={match} />
       </div>
       <div className="space-y-2.5">
-        <TeamRow team={match.home} score={match.home_score} winner={homeWin} />
-        <TeamRow team={match.away} score={match.away_score} winner={awayWin} />
+        <TeamRow team={match.home} score={match.home_score} winner={homeWin} scorers={match.home_scorers} />
+        <TeamRow team={match.away} score={match.away_score} winner={awayWin} scorers={match.away_scorers} />
       </div>
       {(match.status === "LIVE" || match.status === "HT") && (
         <a

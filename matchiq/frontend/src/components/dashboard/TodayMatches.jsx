@@ -46,16 +46,29 @@ export default function TodayMatches({ matches }) {
         return (
           <Link key={m.id} to={`/matches/${m.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-navy-800 transition">
             <div className="w-20 shrink-0 text-xs stat">{statusLabel(m)}</div>
-            <div className="flex min-w-0 flex-1 items-center justify-center gap-2 text-sm">
-              <span className="truncate text-right font-medium text-slate-200" style={{ flexBasis: "40%" }}>
-                {m.home?.name || "TBD"} {m.home?.flag}
-              </span>
-              <span className="stat shrink-0 rounded bg-navy-900 px-2 py-0.5 font-bold text-white">
-                {m.home_score ?? "–"} : {m.away_score ?? "–"}
-              </span>
-              <span className="truncate font-medium text-slate-200" style={{ flexBasis: "40%" }}>
-                {m.away?.flag} {m.away?.name || "TBD"}
-              </span>
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+              <div className="flex w-full items-center justify-center gap-2 text-sm">
+                <span className="truncate text-right font-medium text-slate-200" style={{ flexBasis: "40%" }}>
+                  {m.home?.name || "TBD"} {m.home?.flag}
+                </span>
+                <span className="stat shrink-0 rounded bg-navy-900 px-2 py-0.5 font-bold text-white">
+                  {m.home_score ?? "–"} : {m.away_score ?? "–"}
+                </span>
+                <span className="truncate font-medium text-slate-200" style={{ flexBasis: "40%" }}>
+                  {m.away?.flag} {m.away?.name || "TBD"}
+                </span>
+              </div>
+              {(!isFuture && (m.home_scorers?.length > 0 || m.away_scorers?.length > 0)) && (
+                <div className="flex w-full text-[10px] text-slate-400">
+                  <div className="flex-1 text-right pr-2 truncate">
+                    {m.home_scorers?.map((g, i) => <span key={i}>{g.player} {g.minute}'{i < m.home_scorers.length - 1 ? ', ' : ''}</span>)}
+                  </div>
+                  <div className="w-[38px] shrink-0"></div>
+                  <div className="flex-1 text-left pl-2 truncate">
+                    {m.away_scorers?.map((g, i) => <span key={i}>{g.player} {g.minute}'{i < m.away_scorers.length - 1 ? ', ' : ''}</span>)}
+                  </div>
+                </div>
+              )}
             </div>
             {m.home && m.away && (
               isFuture ? (
